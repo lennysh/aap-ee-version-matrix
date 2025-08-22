@@ -4,7 +4,7 @@
 
 This repository provides a centralized, community-driven tracker for Red Hat Ansible Automation Platform (AAP) Execution Environment package and OS versions. It aims to offer a clear and quick reference for mapping AAP EE's to their corresponding package versions, such as `ansible-core` and `python`.
 
-## 📋 Compatibility Tables
+## 📋 Data Tables
 
 For easy viewing, the raw data has been converted into a user-friendly Markdown table, which is generated from the central CSV file.
 
