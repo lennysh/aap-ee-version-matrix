@@ -500,5 +500,5 @@ registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8,2.18.6,2.18.6,3.
 registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8,2.18.6-1,2.18.6,3.11.11,8.10 (Ootpa),2025-05-20T15:28:20.491493139Z
 registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8,2.18.7,2.18.7,3.11.13,8.10 (Ootpa),2025-07-23T21:15:25.54008164Z
 registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8,2.18.7-3,2.18.7,3.11.13,8.10 (Ootpa),2025-07-23T21:15:25.54008164Z
-registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9,latest,,,,inspect_failed
-registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8,latest,,,,inspect_failed
+registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9,latest,pull_failed,pull_failed,pull_failed,inspect_failed
+registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8,latest,pull_failed,pull_failed,pull_failed,inspect_failed
