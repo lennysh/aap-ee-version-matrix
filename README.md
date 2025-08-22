@@ -45,14 +45,6 @@ Found a mistake or have an update for a new release? Contributions are highly en
 
 To contribute, please **submit a pull request with your changes to the `AAP_EE.csv` files only**. Do not edit the Markdown file directly, as it is overwritten by the automation script. Once your pull request is merged, the script will be re-run to update the table.
 
-## ✨ Contributors
-
-A big thank you to all the contributors who have helped improve this project! You can see a full list of everyone who has contributed on the [contributors page](https://github.com/lennysh/aap-ee-version-matrix/graphs/contributors).
-
-<a href = "https://github.com/lennysh/aap-ee-version-matrix/graphs/contributors">
-  <img src = "https://contrib.rocks/image?repo=lennysh/aap-ee-version-matrix"/>
-</a>
-
 ## ✍️ Authors
 
 * [LennySh](https://github.com/lennysh)
