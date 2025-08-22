@@ -1,0 +1,58 @@
+# .github/workflows/update-compatibility-md-tables.yml
+
+name: Update Compatibility Markdown Tables from CSV
+
+# This action is triggered on every push to the 'main' branch,
+# but only if the 'data/AAP_ALL.csv' file was changed.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'data/AAP_EE.csv'
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "update-tables"
+  update-tables:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # 1. Check out the repository under $GITHUB_WORKSPACE, so the job can access it
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # 2. Make the conversion script executable
+      - name: Make script executable
+        run: chmod +x scripts/csv2md.sh
+
+      # 3. Generate the Markdown file for AAP EE
+      - name: Generate AAP EE Markdown Table
+        run: |
+          ./scripts/csv2md.sh \
+            -t "Red Hat Ansible Automation Platform Execution Environment Version Matrix" \
+            ./data/AAP_EE.csv > AAP_EE.md
+
+      # 5. Commit the updated Markdown files back to the repository
+      - name: Commit and push changes
+        run: |
+          # Configure git with the action's user
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Add the generated files to the staging area
+          git add AAP_EE.md
+          
+          # Check if there are any changes to commit.
+          # The "git diff" command will exit with a non-zero status if there are changes.
+          if ! git diff --staged --quiet; then
+            # If there are changes, commit them
+            git commit -m "docs: auto-generate markdown tables from CSV update"
+            # and push them to the main branch
+            git push
+          else
+            # If there are no changes, print a message
+            echo "No changes to the Markdown files. Nothing to commit."
+          fi
