@@ -43,7 +43,7 @@ To run the full data collection pipeline and then generate the Markdown file, yo
 
 Found a mistake or have an update for a new release? Contributions are highly encouraged!
 
-To contribute, please **submit a pull request with your changes to the `AAP_2x.csv` files only**. Do not edit the Markdown files directly, as they are overwritten by the automation script. Once your pull request is merged, the script will be re-run to update the tables.
+To contribute, please **submit a pull request with your changes to the `AAP_EE.csv` files only**. Do not edit the Markdown file directly, as it is overwritten by the automation script. Once your pull request is merged, the script will be re-run to update the table.
 
 ## ✨ Contributors
 
