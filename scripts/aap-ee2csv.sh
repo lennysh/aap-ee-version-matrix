@@ -95,6 +95,86 @@ discover_new_tags() {
     echo "✅ Discovery complete. Added a total of ${total_new_tags_added} new tags to ${CSV_FILE}."
 }
 
+# Function 1.5: Discover new tags AND prune stale tags from the CSV.
+discover_and_prune() {
+    local CSV_FILE="$1"
+    echo "---"
+    echo "▶️  Starting Task: Discover New Tags and Prune Stale Entries"
+    echo "---"
+
+    if [ ! -f "${CSV_FILE}" ]; then
+        # If the file doesn't exist, just run the normal discovery.
+        discover_new_tags "$CSV_FILE"
+        return
+    fi
+
+    # Step 1: Build a complete hash of all valid tags on the remote registries.
+    declare -A remote_tags
+    echo "🔎 Fetching all current tags from registries..."
+    for path in "${IMAGE_PATHS[@]}"; do
+        while read -r tag; do
+            local exclude_this_tag=false
+            for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+                if [[ "$tag" == *"$pattern"* ]]; then
+                    exclude_this_tag=true
+                    break
+                fi
+            done
+            if ! $exclude_this_tag; then
+                remote_tags["${path},${tag}"]=1
+            fi
+        done < <(podman search --limit 1000 --list-tags "${path}" | tail -n +2 | awk '{print $2}')
+    done
+    echo "  ↳ Found ${#remote_tags[@]} total valid remote tags."
+
+    # Step 2: Process the existing CSV, keeping valid tags and finding new ones.
+    local TEMP_FILE
+    TEMP_FILE=$(mktemp)
+    head -n 1 "${CSV_FILE}" > "${TEMP_FILE}"
+
+    local pruned_count=0
+    local kept_count=0
+
+    # Read the body of the CSV.
+    while IFS= read -r line; do
+        # Reliably get the first two fields, even if the line is complex.
+        IFS=, read -r path tag _ <<< "$line"
+        local key="${path},${tag}"
+
+        if [[ -n "${remote_tags[$key]}" ]]; then
+            # This tag exists remotely, so we keep it.
+            echo "$line" >> "${TEMP_FILE}"
+            # Remove it from the hash so we know it's been processed.
+            unset remote_tags[$key]
+            kept_count=$((kept_count + 1))
+        else
+            # This tag does NOT exist remotely, so we prune it.
+            echo "  ↳ Pruning stale tag: ${tag}"
+            pruned_count=$((pruned_count + 1))
+        fi
+    done < <(tail -n +2 "${CSV_FILE}")
+
+    echo "  ↳ Kept ${kept_count} existing tags."
+    echo "  ↳ Pruned ${pruned_count} stale tags."
+
+    # Step 3: Add any remaining tags from the hash, which must be new.
+    local added_count=0
+    for key in "${!remote_tags[@]}"; do
+        local path="${key%,*}"
+        local tag="${key##*,}"
+        echo "  ↳ Found new tag: ${tag}. Adding to file."
+        echo "${path},${tag},,,,,," >> "${TEMP_FILE}"
+        added_count=$((added_count + 1))
+    done
+    echo "  ↳ Added ${added_count} new tags."
+
+    # Step 4: Replace the old file with the new, synchronized one.
+    mv "${TEMP_FILE}" "${CSV_FILE}"
+
+    echo "---"
+    echo "✅ Discovery and prune complete."
+}
+
 # Function 2: Get versions. Re-engineered to run entirely inside AWK.
 get_image_versions() {
     local CSV_FILE="$1"
@@ -274,7 +354,6 @@ sort_csv() {
     echo "✅ CSV file sorted successfully."
 }
 
-
 # Function to display help message.
 show_help() {
     echo "Usage: $0 <command> <csv_file>"
@@ -282,12 +361,14 @@ show_help() {
     echo "A multi-function script to manage an Execution Environment version matrix."
     echo
     echo "Commands:"
-    echo "  discover    Find new image tags from the registry and add them to the CSV."
-    echo "  versions    Fill in missing Ansible, Python, RHEL, and Collection versions for images in the CSV."
-    echo "  dates       Fill in missing image creation dates using skopeo."
-    echo "  sort        Sort the CSV by image path and then by tag."
-    echo "  all         Run all tasks in sequence: discover, versions, dates, then sort."
-    echo "  help        Show this help message."
+    echo "  discover         Find and ADD new image tags to the CSV."
+    echo "  discover-prune   SYNC tags; adds new ones and REMOVES stale ones from the CSV."
+    echo "  versions         Fill in missing Ansible, Python, RHEL, and Collection versions."
+    echo "  dates            Fill in missing image creation dates using skopeo."
+    echo "  sort             Sort the CSV by image path and then by tag."
+    echo "  all              Run these tasks in sequence: discover, versions, dates, then sort."
+    echo "  all-prune        Run these tasks in sequence: discover-prune, versions, dates, then sort."
+    echo "  help             Show this help message."
 }
 
 ## --- Main Logic ---
@@ -314,6 +395,9 @@ case "$COMMAND" in
     discover)
         discover_new_tags "$CSV_FILE"
         ;;
+    discover-prune)
+        discover_and_prune "$CSV_FILE"
+        ;;
     versions)
         get_image_versions "$CSV_FILE"
         ;;
@@ -325,6 +409,12 @@ case "$COMMAND" in
         ;;
     all)
         discover_new_tags "$CSV_FILE"
+        get_image_versions "$CSV_FILE"
+        get_creation_dates "$CSV_FILE"
+        sort_csv "$CSV_FILE"
+        ;;
+    all-prune)
+        discover_and_prune "$CSV_FILE"
         get_image_versions "$CSV_FILE"
         get_creation_dates "$CSV_FILE"
         sort_csv "$CSV_FILE"
