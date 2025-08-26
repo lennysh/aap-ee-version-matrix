@@ -113,7 +113,18 @@ NR == 1 {
         gsub(/^"|"$/, "", current_field)
         gsub(/^[ \t]+|[ \t]+$/, "", current_field)
 
-        if (current_field ~ /^https?:\/\//) {
+        if (current_header == "ansible_collections") {
+            if (current_field == "No collections found") {
+                printf "| <details><summary>View (0)</summary>No collections found</details> "
+            } else {
+                # Count the collections by splitting the string on the separator
+                count = split(current_field, temp_array, ", ")
+                # Replace commas with HTML line breaks for better readability when expanded
+                gsub(/, /, "<br>", current_field)
+                # Print the HTML <details> block
+                printf "| <details><summary>View (%d)</summary>%s</details> ", count, current_field
+            }
+        } else if (current_field ~ /^https?:\/\//) {
             printf "| [%s](%s) ", current_header, current_field
         } else {
             printf "| %s ", current_field
