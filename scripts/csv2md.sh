@@ -117,12 +117,21 @@ NR == 1 {
             if (current_field == "No collections found") {
                 printf "| <details><summary>View (0)</summary>No collections found</details> "
             } else {
-                # Count the collections by splitting the string on the separator
+                # Split the original string into an array called temp_array
                 count = split(current_field, temp_array, ", ")
-                # Replace commas with HTML line breaks for better readability when expanded
-                gsub(/, /, "<br>", current_field)
-                # Print the HTML <details> block
-                printf "| <details><summary>View (%d)</summary>%s</details> ", count, current_field
+                
+                # Rebuild the string from the array with new formatting
+                formatted_string = ""
+                for (i = 1; i <= count; i++) {
+                    # Add backticks around the current array element (e.g., `amazon.aws 9.2.0`)
+                    formatted_string = formatted_string "`" temp_array[i] "`"
+                    # Add a line break, but not after the very last item
+                    if (i < count) {
+                        formatted_string = formatted_string "<br>"
+                    }
+                }
+                # Print the final, newly formatted string
+                printf "| <details><summary>View (%d)</summary>%s</details> ", count, formatted_string
             }
         } else if (current_field ~ /^https?:\/\//) {
             printf "| [%s](%s) ", current_header, current_field
