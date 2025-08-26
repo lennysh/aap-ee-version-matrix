@@ -249,6 +249,31 @@ get_creation_dates() {
     echo "✅ Creation date collection complete."
 }
 
+# Function 4: Sort the CSV by image_path and then tag.
+sort_csv() {
+    local CSV_FILE="$1"
+    echo "---"
+    echo "▶️  Starting Task: Sort CSV File"
+    echo "---"
+
+    local TEMP_FILE
+    TEMP_FILE=$(mktemp)
+
+    # 1. Write the header row to the new file.
+    head -n 1 "${CSV_FILE}" > "${TEMP_FILE}"
+
+    # 2. Sort the rest of the file (tail -n +2 skips the header) and append it.
+    #    -t, sets the delimiter to a comma.
+    #    -k1,1 sorts by the first field.
+    #    -k2,2 then sorts by the second field.
+    tail -n +2 "${CSV_FILE}" | sort -t, -k1,1 -k2,2 >> "${TEMP_FILE}"
+
+    # 3. Replace the original file with the sorted one.
+    mv "${TEMP_FILE}" "${CSV_FILE}"
+
+    echo "✅ CSV file sorted successfully."
+}
+
 
 # Function to display help message.
 show_help() {
@@ -260,7 +285,8 @@ show_help() {
     echo "  discover    Find new image tags from the registry and add them to the CSV."
     echo "  versions    Fill in missing Ansible, Python, RHEL, and Collection versions for images in the CSV."
     echo "  dates       Fill in missing image creation dates using skopeo."
-    echo "  all         Run all three tasks in sequence: discover, versions, then dates."
+    echo "  sort        Sort the CSV by image path and then by tag."
+    echo "  all         Run all tasks in sequence: discover, versions, dates, then sort."
     echo "  help        Show this help message."
 }
 
@@ -294,10 +320,14 @@ case "$COMMAND" in
     dates)
         get_creation_dates "$CSV_FILE"
         ;;
+    sort)
+        sort_csv "$CSV_FILE"
+        ;;
     all)
         discover_new_tags "$CSV_FILE"
         get_image_versions "$CSV_FILE"
         get_creation_dates "$CSV_FILE"
+        sort_csv "$CSV_FILE"
         ;;
     help)
         show_help
