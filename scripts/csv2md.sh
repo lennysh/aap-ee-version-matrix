@@ -46,10 +46,14 @@ fi
 # --- Core Logic using AWK ---
 awk -v title="$markdown_title" -v filters="$filter_string" -v remove_cols="$remove_string" '
 BEGIN {
-    # CRITICAL FIX: Modified FPAT to handle empty fields.
-    # [^,]* matches "zero or more" non-commas, capturing empty fields between ,,
-    # \"[^\"]*\" handles quoted fields that may contain commas.
     FPAT = "(\"[^\"]*\")|([^,]*)"
+
+    # Define a list of columns that should get the collapsible <details> formatting.
+    # To add more in the future, just add them to this comma-separated string.
+    split("ansible_collections,packages,pip_packages", temp, ",")
+    for (i in temp) {
+        collapsible_columns[temp[i]] = 1
+    }
 
     if (remove_cols != "") {
         n = split(remove_cols, temp_arr, ",")
@@ -69,6 +73,7 @@ BEGIN {
     }
 }
 NR == 1 {
+    # This block for processing the header is unchanged.
     sub(/\r$/, "")
     if (title != "") { print "# " title "\n" }
 
@@ -97,6 +102,7 @@ NR == 1 {
     next
 }
 {
+    # This block for processing data rows has the updated logic.
     sub(/\r$/, "")
     for (col_name in filter_map) {
         raw_field = $header_to_idx[col_name]
@@ -113,26 +119,27 @@ NR == 1 {
         gsub(/^"|"$/, "", current_field)
         gsub(/^[ \t]+|[ \t]+$/, "", current_field)
 
-        if (current_header == "ansible_collections") {
-            if (current_field == "No collections found") {
-                printf "| <details><summary>View (0)</summary>No collections found</details> "
+        # GENERIC LOGIC: Check if the current column header is in our list.
+        if (current_header in collapsible_columns) {
+            count = split(current_field, temp_array, ", ")
+            display_count = count
+
+            # Handle "empty" cases to show a count of 0 in the summary.
+            if (count == 1 && (current_field == "No collections found" || current_field == "Not found")) {
+                display_count = 0
+                formatted_string = current_field
             } else {
-                # Split the original string into an array called temp_array
-                count = split(current_field, temp_array, ", ")
-                
-                # Rebuild the string from the array with new formatting
+                # Rebuild the string with backticks and HTML line breaks.
                 formatted_string = ""
                 for (i = 1; i <= count; i++) {
-                    # Add backticks around the current array element (e.g., `amazon.aws 9.2.0`)
                     formatted_string = formatted_string "`" temp_array[i] "`"
-                    # Add a line break, but not after the very last item
                     if (i < count) {
                         formatted_string = formatted_string "<br>"
                     }
                 }
-                # Print the final, newly formatted string
-                printf "| <details><summary>View (%d)</summary>%s</details> ", count, formatted_string
             }
+            # Print the final, newly formatted string within a <details> block.
+            printf "| <details><summary>View (%d)</summary>%s</details> ", display_count, formatted_string
         } else if (current_field ~ /^https?:\/\//) {
             printf "| [%s](%s) ", current_header, current_field
         } else {

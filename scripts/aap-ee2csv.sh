@@ -32,7 +32,6 @@ RHEL_TRIM_STRINGS=(
 ## --- Functions ---
 
 # Helper function to convert CSV to a clean Tab-Separated (TSV) stream.
-# Awk will consume this stream, as its TSV parser is flawless.
 _csv_to_tsv() {
     local file_to_parse="$1"
     [ ! -s "${file_to_parse}" ] && return
@@ -53,11 +52,10 @@ discover_new_tags() {
     echo "---"
 
     if [ ! -f "${CSV_FILE}" ]; then
-        echo "image_path,tag,ansible_core_version,python_version,rhel_version,ansible_collections,created" > "${CSV_FILE}"
+        echo "image_path,tag,ansible_core_version,python_version,rhel_version,ansible_collections,packages,pip_packages,created" > "${CSV_FILE}"
         echo "📝 Created new CSV file: ${CSV_FILE}"
     fi
 
-    # Load existing entries into an awk array, avoiding the buggy 'while read' loop.
     declare -A existing_entries
     echo "🧠 Loading existing entries from ${CSV_FILE} into memory..."
     while IFS=$'\t' read -r path tag _; do
@@ -82,7 +80,7 @@ discover_new_tags() {
                 local check_key="${path},${tag}"
                 if [[ -z "${existing_entries["${check_key}"]}" ]]; then
                     echo "  ↳ Found new tag: ${tag}. Adding to ${CSV_FILE}."
-                    echo "${path},${tag},,,,," >> "${CSV_FILE}"
+                    echo "${path},${tag},,,,,,," >> "${CSV_FILE}"
                     new_tags_found=$((new_tags_found + 1))
                 fi
             fi
@@ -103,12 +101,10 @@ discover_and_prune() {
     echo "---"
 
     if [ ! -f "${CSV_FILE}" ]; then
-        # If the file doesn't exist, just run the normal discovery.
         discover_new_tags "$CSV_FILE"
         return
     fi
 
-    # Step 1: Build a complete hash of all valid tags on the remote registries.
     declare -A remote_tags
     echo "🔎 Fetching all current tags from registries..."
     for path in "${IMAGE_PATHS[@]}"; do
@@ -127,7 +123,6 @@ discover_and_prune() {
     done
     echo "  ↳ Found ${#remote_tags[@]} total valid remote tags."
 
-    # Step 2: Process the existing CSV, keeping valid tags and finding new ones.
     local TEMP_FILE
     TEMP_FILE=$(mktemp)
     head -n 1 "${CSV_FILE}" > "${TEMP_FILE}"
@@ -135,20 +130,15 @@ discover_and_prune() {
     local pruned_count=0
     local kept_count=0
 
-    # Read the body of the CSV.
     while IFS= read -r line; do
-        # Reliably get the first two fields, even if the line is complex.
         IFS=, read -r path tag _ <<< "$line"
         local key="${path},${tag}"
 
         if [[ -n "${remote_tags[$key]}" ]]; then
-            # This tag exists remotely, so we keep it.
             echo "$line" >> "${TEMP_FILE}"
-            # Remove it from the hash so we know it's been processed.
             unset remote_tags[$key]
             kept_count=$((kept_count + 1))
         else
-            # This tag does NOT exist remotely, so we prune it.
             echo "  ↳ Pruning stale tag: ${tag}"
             pruned_count=$((pruned_count + 1))
         fi
@@ -157,133 +147,136 @@ discover_and_prune() {
     echo "  ↳ Kept ${kept_count} existing tags."
     echo "  ↳ Pruned ${pruned_count} stale tags."
 
-    # Step 3: Add any remaining tags from the hash, which must be new.
     local added_count=0
     for key in "${!remote_tags[@]}"; do
         local path="${key%,*}"
         local tag="${key##*,}"
         echo "  ↳ Found new tag: ${tag}. Adding to file."
-        echo "${path},${tag},,,,,," >> "${TEMP_FILE}"
+        echo "${path},${tag},,,,,,,," >> "${TEMP_FILE}"
         added_count=$((added_count + 1))
     done
     echo "  ↳ Added ${added_count} new tags."
 
-    # Step 4: Replace the old file with the new, synchronized one.
     mv "${TEMP_FILE}" "${CSV_FILE}"
 
     echo "---"
     echo "✅ Discovery and prune complete."
 }
 
-# Function 2: Get versions. Re-engineered to run entirely inside AWK.
-get_image_versions() {
+# Function 2: Get all image details (versions, collections, packages).
+get_image_details() {
     local CSV_FILE="$1"
     echo "---"
-    echo "▶️  Starting Task: Get Image Versions"
+    echo "▶️  Starting Task: Get Image Details"
     echo "---"
 
     local TEMP_FILE
     TEMP_FILE=$(mktemp)
     head -n 1 "${CSV_FILE}" > "${TEMP_FILE}"
 
-    # The entire file processing logic is now inside this single, robust awk command.
     _csv_to_tsv "${CSV_FILE}" | tail -n +2 | awk -F'\t' -v tmp_file="${TEMP_FILE}" \
-      -v rhel_trim_count=${#RHEL_TRIM_STRINGS[@]} \
       -v rhel_trim_str="${RHEL_TRIM_STRINGS[*]}" '
     BEGIN {
-        # Split the Bash array string into an awk array
         split(rhel_trim_str, rhel_trim_arr, " ")
     }
     {
         image_path = $1; tag = $2; ansible_version = $3; python_version = $4
-        rhel_version = $5; ansible_collections = $6; created = $7
+        rhel_version = $5; ansible_collections = $6; packages = $7; pip_packages = $8; created = $9
 
-        if (ansible_version == "" || python_version == "" || rhel_version == "" || ansible_collections == "") {
+        if (ansible_version == "" || python_version == "" || rhel_version == "" || ansible_collections == "" || packages == "" || pip_packages == "") {
             full_image = image_path ":" tag
             print "---" > "/dev/stderr"
-            print "🔄 Processing versions for: " full_image > "/dev/stderr"
+            print "🔄 Processing details for: " full_image > "/dev/stderr"
 
-            # Check if image can be pulled
             if (system("podman pull " full_image " > /dev/null 2>&1") != 0) {
                 print "  ↳ ❌ ERROR: Failed to pull " full_image ". Skipping." > "/dev/stderr"
-                printf("%s,%s,%s,%s,%s,%s,%s\n", image_path, tag, "pull_failed", "pull_failed", "pull_failed", "pull_failed", created) >> tmp_file
+                if(ansible_version == "") {ansible_version = "pull_failed"}
+                if(python_version == "") {python_version = "pull_failed"}
+                if(rhel_version == "") {rhel_version = "pull_failed"}
+                if(ansible_collections == "") {ansible_collections = "pull_failed"}
+                if(packages == "") {packages = "pull_failed"}
+                if(pip_packages == "") {pip_packages = "pull_failed"}
+                printf("%s,%s,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\",%s\n", image_path, tag, ansible_version, python_version, rhel_version, ansible_collections, packages, pip_packages, created) >> tmp_file
                 next
             }
 
-            # Fetch Ansible/Python versions if needed
+            # Fetch Ansible/Python versions only if needed
             if (ansible_version == "" || python_version == "") {
                 print "  ↳ Getting Ansible Core and Python versions..." > "/dev/stderr"
                 cmd = "podman run --rm " full_image " ansible --version 2>/dev/null"
-                if (ansible_version == "") {
-                    ansible_version = "n/a" # Default
-                    while ((cmd | getline line) > 0) { if (line ~ /core/) { sub(/.*core /, "", line); sub(/].*/, "", line); ansible_version=line; break } }
-                    close(cmd)
+                new_ansible_version = "n/a"; new_python_version = "n/a"
+                while ((cmd | getline line) > 0) {
+                    if (line ~ /core/) { sub(/.*core /, "", line); sub(/].*/, "", line); new_ansible_version=line }
+                    if (line ~ /python version/) { sub(/.*python version = /, "", line); sub(/ .*/, "", line); new_python_version=line }
                 }
-                cmd = "podman run --rm " full_image " ansible --version 2>/dev/null" # Re-open for python
-                if (python_version == "") {
-                    python_version = "n/a" # Default
-                    while ((cmd | getline line) > 0) {
-                        if (line ~ /python version/) {
-                            python_version = line
-                            sub(/.*python version = /, "", python_version)
-                            sub(/ .*/, "", python_version)
-                            break
-                        }
-                    }
-                    close(cmd)
-                }
+                close(cmd)
+                if (ansible_version == "") { ansible_version = new_ansible_version }
+                if (python_version == "") { python_version = new_python_version }
             }
 
-            # Fetch RHEL version if needed
+            # Fetch RHEL version only if needed
             if (rhel_version == "") {
                 print "  ↳ Getting RHEL version..." > "/dev/stderr"
                 cmd = "podman run --rm " full_image " cat /etc/redhat-release 2>/dev/null"
-                rhel_version = "n/a"
-                if ((cmd | getline line) > 0) { rhel_version = line }
+                new_rhel_version = "n/a"
+                if ((cmd | getline line) > 0) { new_rhel_version = line }
                 close(cmd)
-                # Trim strings
-                for (i in rhel_trim_arr) { gsub(rhel_trim_arr[i], "", rhel_version) }
-                gsub(/^[[:space:]]+|[[:space:]]+$/, "", rhel_version)
+                for (i in rhel_trim_arr) { gsub(rhel_trim_arr[i], "", new_rhel_version) }
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", new_rhel_version)
+                rhel_version = new_rhel_version
             }
 
-            # Fetch collections if needed
+            # Fetch collections only if needed
             if (ansible_collections == "") {
                 print "  ↳ Getting Ansible collections..." > "/dev/stderr"
                 cmd = "podman run --rm " full_image " ansible-galaxy collection list 2>/dev/null"
                 collections_str = ""
                 while ((cmd | getline line) > 0) {
                     if (line ~ /\./ && line !~ /^#/) {
-                        split(line, parts, /[[:space:]]+/)
-                        collections_str = (collections_str == "" ? "" : collections_str ", ") parts[1] " " parts[2]
+                        split(line, parts, /[[:space:]]+/); collections_str = (collections_str == "" ? "" : collections_str ", ") parts[1] " " parts[2]
                     }
                 }
                 exit_code = close(cmd)
-
-                if (exit_code != 0 || collections_str == "") {
-                    ansible_collections = "No collections found"
-                } else {
-                    ansible_collections = collections_str
-                }
+                ansible_collections = (exit_code != 0 || collections_str == "" ? "No collections found" : collections_str)
             }
 
-            # Delete image
-            system("podman rmi " full_image " > /dev/null 2>&1")
-            print "✅ Successfully processed " full_image > "/dev/stderr"
+            # Fetch RPM packages only if needed
+            if (packages == "") {
+                print "  ↳ Getting system packages (RPM)..." > "/dev/stderr"
+                cmd = "podman run --rm " full_image " sh -c \"rpm -qa --qf \047%{NAME} %{VERSION}-%{RELEASE}\\n\047 | sort\" 2>/dev/null"
+                rpm_str = ""
+                while ((cmd | getline line) > 0) { rpm_str = (rpm_str == "" ? "" : rpm_str ", ") line }
+                exit_code = close(cmd)
+                packages = (exit_code != 0 || rpm_str == "" ? "Not found" : rpm_str)
+            }
+            
+            # Fetch Pip packages only if needed
+            if (pip_packages == "") {
+                print "  ↳ Getting Python packages (Pip)..." > "/dev/stderr"
+                cmd = "podman run --rm " full_image " pip freeze 2>/dev/null"
+                pip_str = ""
+                while ((cmd | getline line) > 0) { pip_str = (pip_str == "" ? "" : pip_str ", ") line }
+                exit_code = close(cmd)
+                pip_packages = (exit_code != 0 || pip_str == "" ? "Not found" : pip_str)
+            }
 
+            system("podman rmi " full_image " > /dev/null 2>&1")
+            print "✅ Successfully processed details for " full_image > "/dev/stderr"
         }
-        # Print the final, correct line to the temp file
-        gsub(/"/, "", rhel_version); # Sanitize just in case
-        gsub(/"/, "", ansible_collections) # Sanitize quotes before adding our own
-        printf("%s,%s,%s,%s,\"%s\",%s,%s\n", image_path, tag, ansible_version, python_version, rhel_version, "\"" ansible_collections "\"", created) >> tmp_file
+        
+        gsub(/"/, "", rhel_version); gsub(/"/, "", ansible_collections)
+        gsub(/"/, "", packages); gsub(/"/, "", pip_packages)
+        
+        printf("%s,%s,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\",%s\n", image_path, tag, ansible_version, python_version, rhel_version, ansible_collections, packages, pip_packages, created) >> tmp_file
     }
     '
 
     mv "${TEMP_FILE}" "${CSV_FILE}"
     echo "---"
-    echo "✅ Version collection complete."
+    echo "✅ Image details collection complete."
 }
 
-# Function 3: Get dates. Re-engineered to run entirely inside AWK.
+# Function 3: Get dates.
 get_creation_dates() {
     local CSV_FILE="$1"
     echo "---"
@@ -294,19 +287,17 @@ get_creation_dates() {
     TEMP_FILE=$(mktemp)
     head -n 1 "${CSV_FILE}" > "${TEMP_FILE}"
 
-    # The entire file processing logic is now inside this single, robust awk command.
     _csv_to_tsv "${CSV_FILE}" | tail -n +2 | awk -F'\t' -v tmp_file="${TEMP_FILE}" '
     {
-        # Assign fields for clarity
         image_path = $1; tag = $2; ansible_version = $3; python_version = $4
-        rhel_version = $5; ansible_collections = $6; created = $7
+        rhel_version = $5; ansible_collections = $6; packages = $7; pip_packages = $8; created = $9
 
         if (created == "" || created == "inspect_failed") {
             print "---" > "/dev/stderr"
             print "🔄 Processing date for: " image_path ":" tag > "/dev/stderr"
 
             cmd = "skopeo inspect docker://" image_path ":" tag " 2>/dev/null | jq -r \".Created\""
-            created_date = "inspect_failed" # Default in case of failure
+            created_date = "inspect_failed"
             if ((cmd | getline line) > 0 && line != "null" && line != "") {
                 created_date = line
             }
@@ -315,12 +306,10 @@ get_creation_dates() {
             print "  ↳ Found date: " created > "/dev/stderr"
         }
 
-        # Sanitize quotes before printing
-        gsub(/"/, "", rhel_version)
-        gsub(/"/, "", ansible_collections)
+        gsub(/"/, "", rhel_version); gsub(/"/, "", ansible_collections)
+        gsub(/"/, "", packages); gsub(/"/, "", pip_packages)
         
-        # Print the final, correct line to the temp file
-        printf("%s,%s,%s,%s,\"%s\",\"%s\",%s\n", image_path, tag, ansible_version, python_version, rhel_version, ansible_collections, created) >> tmp_file
+        printf("%s,%s,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\",%s\n", image_path, tag, ansible_version, python_version, rhel_version, ansible_collections, packages, pip_packages, created) >> tmp_file
     }
     '
 
@@ -338,17 +327,8 @@ sort_csv() {
 
     local TEMP_FILE
     TEMP_FILE=$(mktemp)
-
-    # 1. Write the header row to the new file.
     head -n 1 "${CSV_FILE}" > "${TEMP_FILE}"
-
-    # 2. Sort the rest of the file (tail -n +2 skips the header) and append it.
-    #    -t, sets the delimiter to a comma.
-    #    -k1,1 sorts by the first field.
-    #    -k2,2 then sorts by the second field.
     tail -n +2 "${CSV_FILE}" | sort -t, -k1,1 -k2,2 >> "${TEMP_FILE}"
-
-    # 3. Replace the original file with the sorted one.
     mv "${TEMP_FILE}" "${CSV_FILE}"
 
     echo "✅ CSV file sorted successfully."
@@ -358,16 +338,14 @@ sort_csv() {
 show_help() {
     echo "Usage: $0 <command> <csv_file>"
     echo
-    echo "A multi-function script to manage an Execution Environment version matrix."
-    echo
     echo "Commands:"
     echo "  discover         Find and ADD new image tags to the CSV."
     echo "  discover-prune   SYNC tags; adds new ones and REMOVES stale ones from the CSV."
-    echo "  versions         Fill in missing Ansible, Python, RHEL, and Collection versions."
+    echo "  details          Fill in missing versions, collections, and packages for images."
     echo "  dates            Fill in missing image creation dates using skopeo."
     echo "  sort             Sort the CSV by image path and then by tag."
-    echo "  all              Run these tasks in sequence: discover, versions, dates, then sort."
-    echo "  all-prune        Run these tasks in sequence: discover-prune, versions, dates, then sort."
+    echo "  all              Run tasks in sequence: discover, details, dates, sort."
+    echo "  all-prune        Run tasks in sequence: discover-prune, details, dates, sort."
     echo "  help             Show this help message."
 }
 
@@ -381,7 +359,6 @@ for cmd in python3 podman skopeo jq; do
     fi
 done
 
-# Check for minimum number of arguments.
 if [ "$#" -lt 2 ]; then
     show_help
     exit 1
@@ -390,7 +367,6 @@ fi
 COMMAND="$1"
 CSV_FILE="$2"
 
-# Main command dispatcher.
 case "$COMMAND" in
     discover)
         discover_new_tags "$CSV_FILE"
@@ -398,8 +374,8 @@ case "$COMMAND" in
     discover-prune)
         discover_and_prune "$CSV_FILE"
         ;;
-    versions)
-        get_image_versions "$CSV_FILE"
+    details)
+        get_image_details "$CSV_FILE"
         ;;
     dates)
         get_creation_dates "$CSV_FILE"
@@ -409,13 +385,13 @@ case "$COMMAND" in
         ;;
     all)
         discover_new_tags "$CSV_FILE"
-        get_image_versions "$CSV_FILE"
+        get_image_details "$CSV_FILE"
         get_creation_dates "$CSV_FILE"
         sort_csv "$CSV_FILE"
         ;;
     all-prune)
         discover_and_prune "$CSV_FILE"
-        get_image_versions "$CSV_FILE"
+        get_image_details "$CSV_FILE"
         get_creation_dates "$CSV_FILE"
         sort_csv "$CSV_FILE"
         ;;
