@@ -33,7 +33,7 @@ jobs:
         run: |
           ./scripts/csv2md.sh \
             -t "Red Hat Ansible Automation Platform Execution Environment Version Matrix" \
-            -R "digest" \
+            -R "digest,packages,pip_packages" \
             ./data/AAP_EE.csv > AAP_EE.md
 
       # 5. Commit the updated Markdown files back to the repository

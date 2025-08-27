@@ -48,8 +48,13 @@ awk -v title="$markdown_title" -v filters="$filter_string" -v remove_cols="$remo
 BEGIN {
     FPAT = "(\"[^\"]*\")|([^,]*)"
 
+    # Define a list of columns that should get the code block formatting.
+    split("tags", temp, ",")
+    for (i in temp) {
+        codeblock_columns[temp[i]] = 1
+    }
+
     # Define a list of columns that should get the collapsible <details> formatting.
-    # To add more in the future, just add them to this comma-separated string.
     split("ansible_collections,packages,pip_packages", temp, ",")
     for (i in temp) {
         collapsible_columns[temp[i]] = 1
@@ -120,7 +125,18 @@ NR == 1 {
         gsub(/^[ \t]+|[ \t]+$/, "", current_field)
 
         # GENERIC LOGIC: Check if the current column header is in our list.
-        if (current_header in collapsible_columns) {
+        if (current_header in codeblock_columns) {
+            count = split(current_field, temp_array, ",")
+            formatted_string = ""
+            for (i = 1; i <= count; i++) {
+                formatted_string = formatted_string "`" temp_array[i] "`"
+                if (i < count) 
+                {
+                    formatted_string = formatted_string ", "
+                }
+            }
+            printf "| %s ", formatted_string
+        } else if (current_header in collapsible_columns) {
             count = split(current_field, temp_array, ", ")
             display_count = count
 
@@ -131,9 +147,11 @@ NR == 1 {
             } else {
                 # Rebuild the string with backticks and HTML line breaks.
                 formatted_string = ""
-                for (i = 1; i <= count; i++) {
+                for (i = 1; i <= count; i++) 
+                {
                     formatted_string = formatted_string "`" temp_array[i] "`"
-                    if (i < count) {
+                    if (i < count) 
+                    {
                         formatted_string = formatted_string "<br>"
                     }
                 }

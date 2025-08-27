@@ -13,6 +13,10 @@ IMAGE_PATHS=(
   "registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9"
   "registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9"
   "registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9"
+  "registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8"
+  "registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8"
+  "registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8"
+  "registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8"
   "registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9"
   "registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8"
 )
@@ -313,7 +317,7 @@ get_image_details() {
             
             if (pip_packages == "") {
                 print "  ↳ Getting Python packages (Pip)..." > "/dev/stderr"
-                cmd = "podman run --rm " full_image " pip freeze 2>/dev/null"
+                cmd = "podman run --rm " full_image " pip3 freeze 2>/dev/null"
                 pip_str = ""
                 while ((cmd | getline line) > 0) { pip_str = (pip_str == "" ? "" : pip_str ", ") line }
                 exit_code = close(cmd)
