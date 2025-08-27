@@ -1,6 +1,6 @@
 #!/bin/bash
 # A multi-function script to discover, inspect, and catalog
-# Ansible Automation Platform Execution Environments.
+# Ansible Automation Platform Execution Environments based on image digests.
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
@@ -44,30 +44,46 @@ for row in reader:
 ' < "${file_to_parse}"
 }
 
-# Function 1: Discover new tags and add them to the CSV.
+# Helper function to check for the correct CSV header.
+_check_csv_header() {
+    local CSV_FILE="$1"
+    if [ -f "${CSV_FILE}" ] && ! head -n 1 "${CSV_FILE}" 2>/dev/null | grep -q ",digest,"; then
+        echo "❌ Error: CSV file '${CSV_FILE}' has an old format (missing 'digest' column)." >&2
+        echo "   Please delete or rename the old file and run the 'discover' command first." >&2
+        exit 1
+    fi
+}
+
+# Function 1: Discover new images by digest and add them to the CSV.
+# This function now ALSO captures the creation date.
 discover_new_tags() {
     local CSV_FILE="$1"
     echo "---"
-    echo "▶️  Starting Task: Discover New Tags"
+    echo "▶️  Starting Task: Discover New Images by Digest (and Creation Date)"
     echo "---"
 
     if [ ! -f "${CSV_FILE}" ]; then
-        echo "image_path,tag,ansible_core_version,python_version,rhel_version,ansible_collections,packages,pip_packages,created" > "${CSV_FILE}"
+        echo "image_path,tags,digest,ansible_core_version,python_version,rhel_version,ansible_collections,packages,pip_packages,created" > "${CSV_FILE}"
         echo "📝 Created new CSV file: ${CSV_FILE}"
+    else
+        _check_csv_header "$CSV_FILE"
     fi
 
-    declare -A existing_entries
-    echo "🧠 Loading existing entries from ${CSV_FILE} into memory..."
-    while IFS=$'\t' read -r path tag _; do
-        existing_entries["${path},${tag}"]=1
-    done < <(_csv_to_tsv "${CSV_FILE}" | tail -n +2) # Skip header
-    echo "  ↳ Done. Found ${#existing_entries[@]} existing entries."
+    declare -A existing_digests
+    echo "🧠 Loading existing image digests from ${CSV_FILE}..."
+    while IFS=$'\t' read -r path _ digest _; do
+        if [[ -n "$digest" ]]; then
+            existing_digests["${path},${digest}"]=1
+        fi
+    done < <(_csv_to_tsv "${CSV_FILE}" | tail -n +2)
+    echo "  ↳ Done. Found ${#existing_digests[@]} existing unique images."
 
-    local total_new_tags_added=0
+    declare -A remote_images_by_digest
+    declare -A digest_to_created_date
+    echo "🔎 Fetching tags, digests, and dates from registries (this may take a while)..."
     for path in "${IMAGE_PATHS[@]}"; do
         echo "---"
-        echo "🔎 Finding tags for: ${path}"
-        local new_tags_found=0
+        echo "   Querying path: ${path}"
         while read -r tag; do
             local exclude_this_tag=false
             for pattern in "${EXCLUDE_PATTERNS[@]}"; do
@@ -77,37 +93,64 @@ discover_new_tags() {
                 fi
             done
             if ! $exclude_this_tag; then
-                local check_key="${path},${tag}"
-                if [[ -z "${existing_entries["${check_key}"]}" ]]; then
-                    echo "  ↳ Found new tag: ${tag}. Adding to ${CSV_FILE}."
-                    echo "${path},${tag},,,,,,," >> "${CSV_FILE}"
-                    new_tags_found=$((new_tags_found + 1))
+                local inspect_json
+                inspect_json=$(timeout 30s skopeo inspect "docker://${path}:${tag}" 2>/dev/null || echo "{}")
+                
+                local output
+                output=$(echo "$inspect_json" | jq -r '[.Digest, .Created] | @tsv')
+                local digest created_date
+                IFS=$'\t' read -r digest created_date <<< "$output"
+
+                if [[ -n "$digest" && "$digest" != "null" ]]; then
+                    echo "     ↳ Found tag: '${tag}' -> Digest: ${digest:7:12}..."
+                    remote_images_by_digest["${path},${digest}"]+="${tag},"
+                    if [[ -z "${digest_to_created_date["${path},${digest}"]}" ]]; then
+                       digest_to_created_date["${path},${digest}"]="$created_date"
+                    fi
+                else
+                    echo "     ↳ ⚠️ Could not get digest for tag: '${tag}'. Skipping." >&2
                 fi
             fi
         done < <(podman search --limit 1000 --list-tags "${path}" | tail -n +2 | awk '{print $2}')
-        echo "  ↳ Added ${new_tags_found} new tags for this path."
-        total_new_tags_added=$((total_new_tags_added + new_tags_found))
     done
 
+    local total_new_images_added=0
     echo "---"
-    echo "✅ Discovery complete. Added a total of ${total_new_tags_added} new tags to ${CSV_FILE}."
+    echo "🔄 Comparing remote images with local CSV..."
+    for key in "${!remote_images_by_digest[@]}"; do
+        if [[ -z "${existing_digests[$key]}" ]]; then
+            local path="${key%,*}"
+            local digest="${key##*,}"
+            local tags=${remote_images_by_digest[$key]%,}
+            local created=${digest_to_created_date[$key]}
+            echo "  ↳ ✨ Found new image digest: ${digest:7:12}... with tags: ${tags}. Adding to ${CSV_FILE}."
+            echo "${path},\"${tags}\",${digest},,,,,,,${created}" >> "${CSV_FILE}"
+            total_new_images_added=$((total_new_images_added + 1))
+        fi
+    done
+    echo "---"
+    echo "✅ Discovery complete. Added ${total_new_images_added} new unique images to ${CSV_FILE}."
 }
 
-# Function 1.5: Discover new tags AND prune stale tags from the CSV.
+# Function 1.5: Sync images by digest (discover new, update tags, and prune stale).
+# This function now ALSO captures the creation date.
 discover_and_prune() {
     local CSV_FILE="$1"
     echo "---"
-    echo "▶️  Starting Task: Discover New Tags and Prune Stale Entries"
+    echo "▶️  Starting Task: Sync Images by Digest (Discover & Prune)"
     echo "---"
 
     if [ ! -f "${CSV_FILE}" ]; then
         discover_new_tags "$CSV_FILE"
         return
     fi
+    _check_csv_header "$CSV_FILE"
 
-    declare -A remote_tags
-    echo "🔎 Fetching all current tags from registries..."
+    declare -A remote_images_by_digest
+    declare -A digest_to_created_date
+    echo "🔎 Fetching all current tags, digests, and dates from registries (this may take a while)..."
     for path in "${IMAGE_PATHS[@]}"; do
+        echo "   Querying path: ${path}"
         while read -r tag; do
             local exclude_this_tag=false
             for pattern in "${EXCLUDE_PATTERNS[@]}"; do
@@ -117,55 +160,77 @@ discover_and_prune() {
                 fi
             done
             if ! $exclude_this_tag; then
-                remote_tags["${path},${tag}"]=1
+                local inspect_json
+                inspect_json=$(timeout 30s skopeo inspect "docker://${path}:${tag}" 2>/dev/null || echo "{}")
+                
+                local output
+                output=$(echo "$inspect_json" | jq -r '[.Digest, .Created] | @tsv')
+                local digest created_date
+                IFS=$'\t' read -r digest created_date <<< "$output"
+
+                if [[ -n "$digest" && "$digest" != "null" ]]; then
+                    remote_images_by_digest["${path},${digest}"]+="${tag},"
+                     if [[ -z "${digest_to_created_date["${path},${digest}"]}" ]]; then
+                       digest_to_created_date["${path},${digest}"]="$created_date"
+                    fi
+                fi
             fi
         done < <(podman search --limit 1000 --list-tags "${path}" | tail -n +2 | awk '{print $2}')
     done
-    echo "  ↳ Found ${#remote_tags[@]} total valid remote tags."
+    echo "  ↳ Found ${#remote_images_by_digest[@]} total unique remote images."
 
     local TEMP_FILE
     TEMP_FILE=$(mktemp)
     head -n 1 "${CSV_FILE}" > "${TEMP_FILE}"
+    local pruned_count=0 kept_count=0 updated_count=0
 
-    local pruned_count=0
-    local kept_count=0
-
-    while IFS= read -r line; do
-        IFS=, read -r path tag _ <<< "$line"
-        local key="${path},${tag}"
-
-        if [[ -n "${remote_tags[$key]}" ]]; then
-            echo "$line" >> "${TEMP_FILE}"
-            unset remote_tags[$key]
+    _csv_to_tsv "${CSV_FILE}" | tail -n +2 | while IFS=$'\t' read -r path tags digest ansible_core python rhel collections packages pip created; do
+        local key="${path},${digest}"
+        if [[ -n "${remote_images_by_digest[$key]}" ]]; then
+            local remote_tags_csv=${remote_images_by_digest[$key]%,}
+            local sorted_remote=$(echo "$remote_tags_csv" | tr ',' '\n' | sort | paste -sd ',' -)
+            local sorted_local=$(echo "$tags" | tr ',' '\n' | sort | paste -sd ',' -)
+            if [[ "$sorted_local" != "$sorted_remote" ]]; then
+                echo "  ↳ 🔄 Updating tags for digest ${digest:7:12}..."
+                tags=$remote_tags_csv
+                updated_count=$((updated_count + 1))
+            fi
+            printf "%s,\"%s\",%s,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\",%s\n" "$path" "$tags" "$digest" "$ansible_core" "$python" "$rhel" "$collections" "$packages" "$pip" "$created" >> "${TEMP_FILE}"
+            unset remote_images_by_digest[$key]
             kept_count=$((kept_count + 1))
         else
-            echo "  ↳ Pruning stale tag: ${tag}"
+            echo "  ↳ 🗑️ Pruning stale image: digest ${digest:7:12}..."
             pruned_count=$((pruned_count + 1))
         fi
-    done < <(tail -n +2 "${CSV_FILE}")
-
-    echo "  ↳ Kept ${kept_count} existing tags."
-    echo "  ↳ Pruned ${pruned_count} stale tags."
-
-    local added_count=0
-    for key in "${!remote_tags[@]}"; do
-        local path="${key%,*}"
-        local tag="${key##*,}"
-        echo "  ↳ Found new tag: ${tag}. Adding to file."
-        echo "${path},${tag},,,,,,,," >> "${TEMP_FILE}"
-        added_count=$((added_count + 1))
     done
-    echo "  ↳ Added ${added_count} new tags."
-
-    mv "${TEMP_FILE}" "${CSV_FILE}"
 
     echo "---"
-    echo "✅ Discovery and prune complete."
+    echo "📊 Sync Summary:"
+    echo "  ↳ Kept ${kept_count} existing images."
+    echo "  ↳ Updated ${updated_count} images with new tags."
+    echo "  ↳ Pruned ${pruned_count} stale images."
+
+    local added_count=0
+    for key in "${!remote_images_by_digest[@]}"; do
+        local path="${key%,*}"
+        local digest="${key##*,}"
+        local tags=${remote_images_by_digest[$key]%,}
+        local created=${digest_to_created_date[$key]}
+        echo "  ↳ ✨ Found new image: digest ${digest:7:12}... (tags: ${tags}). Adding to file."
+        echo "${path},\"${tags}\",${digest},,,,,,,${created}" >> "${TEMP_FILE}"
+        added_count=$((added_count + 1))
+    done
+    echo "  ↳ Added ${added_count} new images."
+
+    mv "${TEMP_FILE}" "${CSV_FILE}"
+    echo "---"
+    echo "✅ Sync (discover and prune) complete."
 }
 
 # Function 2: Get all image details (versions, collections, packages).
 get_image_details() {
     local CSV_FILE="$1"
+    _check_csv_header "$CSV_FILE"
     echo "---"
     echo "▶️  Starting Task: Get Image Details"
     echo "---"
@@ -180,11 +245,11 @@ get_image_details() {
         split(rhel_trim_str, rhel_trim_arr, " ")
     }
     {
-        image_path = $1; tag = $2; ansible_version = $3; python_version = $4
-        rhel_version = $5; ansible_collections = $6; packages = $7; pip_packages = $8; created = $9
+        image_path = $1; tags = $2; digest = $3; ansible_version = $4; python_version = $5
+        rhel_version = $6; ansible_collections = $7; packages = $8; pip_packages = $9; created = $10
 
-        if (ansible_version == "" || python_version == "" || rhel_version == "" || ansible_collections == "" || packages == "" || pip_packages == "") {
-            full_image = image_path ":" tag
+        if ((ansible_version == "" || python_version == "" || rhel_version == "" || ansible_collections == "" || packages == "" || pip_packages == "") && digest != "") {
+            full_image = image_path "@" digest
             print "---" > "/dev/stderr"
             print "🔄 Processing details for: " full_image > "/dev/stderr"
 
@@ -196,11 +261,10 @@ get_image_details() {
                 if(ansible_collections == "") {ansible_collections = "pull_failed"}
                 if(packages == "") {packages = "pull_failed"}
                 if(pip_packages == "") {pip_packages = "pull_failed"}
-                printf("%s,%s,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\",%s\n", image_path, tag, ansible_version, python_version, rhel_version, ansible_collections, packages, pip_packages, created) >> tmp_file
+                printf("%s,\"%s\",%s,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\",%s\n", image_path, tags, digest, ansible_version, python_version, rhel_version, ansible_collections, packages, pip_packages, created) >> tmp_file
                 next
             }
 
-            # Fetch Ansible/Python versions only if needed
             if (ansible_version == "" || python_version == "") {
                 print "  ↳ Getting Ansible Core and Python versions..." > "/dev/stderr"
                 cmd = "podman run --rm " full_image " ansible --version 2>/dev/null"
@@ -214,7 +278,6 @@ get_image_details() {
                 if (python_version == "") { python_version = new_python_version }
             }
 
-            # Fetch RHEL version only if needed
             if (rhel_version == "") {
                 print "  ↳ Getting RHEL version..." > "/dev/stderr"
                 cmd = "podman run --rm " full_image " cat /etc/redhat-release 2>/dev/null"
@@ -226,7 +289,6 @@ get_image_details() {
                 rhel_version = new_rhel_version
             }
 
-            # Fetch collections only if needed
             if (ansible_collections == "") {
                 print "  ↳ Getting Ansible collections..." > "/dev/stderr"
                 cmd = "podman run --rm " full_image " ansible-galaxy collection list 2>/dev/null"
@@ -240,7 +302,6 @@ get_image_details() {
                 ansible_collections = (exit_code != 0 || collections_str == "" ? "No collections found" : collections_str)
             }
 
-            # Fetch RPM packages only if needed
             if (packages == "") {
                 print "  ↳ Getting system packages (RPM)..." > "/dev/stderr"
                 cmd = "podman run --rm " full_image " sh -c \"rpm -qa --qf \047%{NAME} %{VERSION}-%{RELEASE}\\n\047 | sort\" 2>/dev/null"
@@ -250,7 +311,6 @@ get_image_details() {
                 packages = (exit_code != 0 || rpm_str == "" ? "Not found" : rpm_str)
             }
             
-            # Fetch Pip packages only if needed
             if (pip_packages == "") {
                 print "  ↳ Getting Python packages (Pip)..." > "/dev/stderr"
                 cmd = "podman run --rm " full_image " pip freeze 2>/dev/null"
@@ -267,7 +327,7 @@ get_image_details() {
         gsub(/"/, "", rhel_version); gsub(/"/, "", ansible_collections)
         gsub(/"/, "", packages); gsub(/"/, "", pip_packages)
         
-        printf("%s,%s,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\",%s\n", image_path, tag, ansible_version, python_version, rhel_version, ansible_collections, packages, pip_packages, created) >> tmp_file
+        printf("%s,\"%s\",%s,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\",%s\n", image_path, tags, digest, ansible_version, python_version, rhel_version, ansible_collections, packages, pip_packages, created) >> tmp_file
     }
     '
 
@@ -276,54 +336,13 @@ get_image_details() {
     echo "✅ Image details collection complete."
 }
 
-# Function 3: Get dates.
-get_creation_dates() {
-    local CSV_FILE="$1"
-    echo "---"
-    echo "▶️  Starting Task: Get Creation Dates"
-    echo "---"
-
-    local TEMP_FILE
-    TEMP_FILE=$(mktemp)
-    head -n 1 "${CSV_FILE}" > "${TEMP_FILE}"
-
-    _csv_to_tsv "${CSV_FILE}" | tail -n +2 | awk -F'\t' -v tmp_file="${TEMP_FILE}" '
-    {
-        image_path = $1; tag = $2; ansible_version = $3; python_version = $4
-        rhel_version = $5; ansible_collections = $6; packages = $7; pip_packages = $8; created = $9
-
-        if (created == "" || created == "inspect_failed") {
-            print "---" > "/dev/stderr"
-            print "🔄 Processing date for: " image_path ":" tag > "/dev/stderr"
-
-            cmd = "skopeo inspect docker://" image_path ":" tag " 2>/dev/null | jq -r \".Created\""
-            created_date = "inspect_failed"
-            if ((cmd | getline line) > 0 && line != "null" && line != "") {
-                created_date = line
-            }
-            close(cmd)
-            created = created_date
-            print "  ↳ Found date: " created > "/dev/stderr"
-        }
-
-        gsub(/"/, "", rhel_version); gsub(/"/, "", ansible_collections)
-        gsub(/"/, "", packages); gsub(/"/, "", pip_packages)
-        
-        printf("%s,%s,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\",%s\n", image_path, tag, ansible_version, python_version, rhel_version, ansible_collections, packages, pip_packages, created) >> tmp_file
-    }
-    '
-
-    mv "${TEMP_FILE}" "${CSV_FILE}"
-    echo "---"
-    echo "✅ Creation date collection complete."
-}
-
-# Function 4: Sort the CSV by image_path and then tag.
+# Function 3: Sort the CSV by image_path and then tags.
 sort_csv() {
     local CSV_FILE="$1"
     echo "---"
     echo "▶️  Starting Task: Sort CSV File"
     echo "---"
+    _check_csv_header "$CSV_FILE"
 
     local TEMP_FILE
     TEMP_FILE=$(mktemp)
@@ -339,14 +358,15 @@ show_help() {
     echo "Usage: $0 <command> <csv_file>"
     echo
     echo "Commands:"
-    echo "  discover         Find and ADD new image tags to the CSV."
-    echo "  discover-prune   SYNC tags; adds new ones and REMOVES stale ones from the CSV."
+    echo "  discover         Find and ADD new unique images (by digest) and their creation dates."
+    echo "  discover-prune   SYNC images; adds new ones, updates tags, and REMOVES stale ones."
     echo "  details          Fill in missing versions, collections, and packages for images."
-    echo "  dates            Fill in missing image creation dates using skopeo."
-    echo "  sort             Sort the CSV by image path and then by tag."
-    echo "  all              Run tasks in sequence: discover, details, dates, sort."
-    echo "  all-prune        Run tasks in sequence: discover-prune, details, dates, sort."
+    echo "  sort             Sort the CSV by image path and then by tags."
+    echo "  all              Run tasks in sequence: discover, details, sort."
+    echo "  all-prune        Run tasks in sequence: discover-prune, details, sort."
     echo "  help             Show this help message."
+    echo
+    echo "Note: This script now uses a new CSV format. If you have an old CSV, please delete it first."
 }
 
 ## --- Main Logic ---
@@ -377,22 +397,17 @@ case "$COMMAND" in
     details)
         get_image_details "$CSV_FILE"
         ;;
-    dates)
-        get_creation_dates "$CSV_FILE"
-        ;;
     sort)
         sort_csv "$CSV_FILE"
         ;;
     all)
         discover_new_tags "$CSV_FILE"
         get_image_details "$CSV_FILE"
-        get_creation_dates "$CSV_FILE"
         sort_csv "$CSV_FILE"
         ;;
     all-prune)
         discover_and_prune "$CSV_FILE"
         get_image_details "$CSV_FILE"
-        get_creation_dates "$CSV_FILE"
         sort_csv "$CSV_FILE"
         ;;
     help)
