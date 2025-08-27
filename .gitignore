@@ -1,9 +1,2 @@
-archive/AAP_EE_orig.csv
-archive/AAP_EE_temp.csv
-archive/AAP_EE_test.csv
-archive/aap-ee2csv_new copy 2.sh
-archive/aap-ee2csv_new copy 3.sh
-archive/aap-ee2csv_new copy.sh
-archive/aap-ee2csv_orig.sh
-archive/csv2md_new copy.sh
-archive/csv2md_orig.sh
+archive/
+registry.redhat.io/
