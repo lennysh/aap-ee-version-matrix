@@ -144,6 +144,8 @@ NR == 1 {
             if (count == 1 && (current_field == "No collections found" || current_field == "Not found")) {
                 display_count = 0
                 formatted_string = current_field
+                # Print the final, newly formatted string within a <details> block.
+                printf "| %s ", formatted_string
             } else {
                 # Rebuild the string with backticks and HTML line breaks.
                 formatted_string = ""
@@ -155,9 +157,9 @@ NR == 1 {
                         formatted_string = formatted_string "<br>"
                     }
                 }
+                # Print the final, newly formatted string within a <details> block.
+                printf "| <details><summary>View (%d)</summary>%s</details> ", display_count, formatted_string
             }
-            # Print the final, newly formatted string within a <details> block.
-            printf "| <details><summary>View (%d)</summary>%s</details> ", display_count, formatted_string
         } else if (current_field ~ /^https?:\/\//) {
             printf "| [%s](%s) ", current_header, current_field
         } else {
