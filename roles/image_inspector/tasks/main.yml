@@ -1,0 +1,25 @@
+---
+# tasks file for image_inspector role
+
+- name: Ensure output directory exists
+  ansible.builtin.file:
+    path: "{{ image_inspector_output_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Include and loop over discovery tasks for each image path
+  ansible.builtin.include_tasks:
+    file: discover.yml
+    apply:
+      tags: [discover]
+  tags: [always, discover]
+  loop: "{{ image_inspector_image_paths }}"
+  loop_control:
+    loop_var: image_path
+
+- name: Include image detail tasks
+  ansible.builtin.include_tasks:
+    file: details.yml
+    apply:
+      tags: details
+  tags: [never, details]

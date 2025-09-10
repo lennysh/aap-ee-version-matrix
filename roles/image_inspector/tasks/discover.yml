@@ -1,0 +1,133 @@
+---
+# This file is looped over for each image_path
+
+- name: "Discovering images for: {{ image_path }}"
+  vars:
+    # yaml_file_name: "{{ image_path | regex_replace('/', '_') }}.yml"
+    yaml_file_name: "{{ image_path }}/vars.yml"
+    yaml_file_path: "{{ image_inspector_output_dir }}/{{ yaml_file_name }}"
+  block:
+    - name: Ensure yaml output directory exists
+      ansible.builtin.file:
+        path: "{{ yaml_file_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    # 1. Fetch all remote tags and digests
+    - name: Fetch remote tags from registry
+      ansible.builtin.shell:
+        cmd: >
+          set -o pipefail &&
+          podman search --limit 1000 --list-tags "{{ image_path }}" |
+          tail -n +2 | awk '{print $2}'
+      register: remote_tags_raw
+      changed_when: false
+
+    - name: Filter out excluded tags from the list
+      ansible.builtin.set_fact:
+        filtered_tags: >
+          {{ remote_tags_raw.stdout_lines |
+            reject('regex', '.*(' + (image_inspector_exclude_patterns | join('|')) + ').*') |
+            list }}
+
+    - name: Inspect each tag to get its digest and creation date
+      ansible.builtin.shell:
+        cmd: "skopeo inspect --format '{{ '{{' }}.Digest{{ \"}}\" }},{{ '{{' }}.Created.Format \"2006-01-02 15:04:05 MST\"{{ \"}}\" }}' \"docker://{{ image_path }}:{{ item }}\"" # noqa: yaml[line-length]
+      register: inspect_results
+      loop: "{{ filtered_tags }}"
+      loop_control:
+        label: "{{ image_path }}@{{ item }}"
+      failed_when: false
+      changed_when: false
+
+    - name: Initialize remote images by digest dictionary
+      ansible.builtin.set_fact:
+        remote_images_by_digest: {}
+
+    - name: Aggregate remote tags by digest
+      ansible.builtin.set_fact:
+        remote_images_by_digest: >
+          {{ remote_images_by_digest | default({}) | combine({
+              item.stdout.split(',')[0]: {
+                'tags': (remote_images_by_digest[item.stdout.split(',')[0]].tags | default([]) + [item.item]) | sort,
+                'created': item.stdout.split(',')[1]
+              }
+            }, recursive=true) }}
+      loop: "{{ inspect_results.results }}"
+      loop_control:
+        label: "{{ image_path }}@{{ item.item }}"
+      when:
+        - item.rc is defined       # First, check if the rc key exists
+        - item.rc == 0             # Then, check its value
+        - item.stdout is defined   # Also good practice to check for stdout
+        - item.stdout != ""        # Ensure stdout is not empty
+
+    # 2. Load existing data from the local YAML file
+    - name: Check for existing inventory file
+      ansible.builtin.stat:
+        path: "{{ yaml_file_path }}"
+      register: existing_yaml_stat
+
+    - name: Load existing image data if file exists
+      ansible.builtin.include_vars:
+        file: "{{ yaml_file_path }}"
+        name: existing_data
+      when: existing_yaml_stat.stat.exists
+
+    - name: Initialize existing images by digest dictionary
+      ansible.builtin.set_fact:
+        existing_images_by_digest: {}
+      when: existing_yaml_stat.stat.exists
+
+    - name: Create a lookup dictionary from existing data
+      ansible.builtin.set_fact:
+        existing_images_by_digest: "{{ existing_images_by_digest | default({}) | combine({item.digest: item}) }}"
+      loop: "{{ existing_data.images | default([]) }}"
+      loop_control:
+        label: "{{ image_path }}@{{ item.digest }}"
+      when: existing_yaml_stat.stat.exists
+
+    # 3. Compare and generate the final list
+    - name: "Generate final image list for {{ image_path }}"
+      ansible.builtin.set_fact:
+        final_image_list: >
+          {% set final_list = [] %}
+          {% set remote_digests = remote_images_by_digest.keys() | list %}
+          {# Below, we provide a default empty dictionary to prevent the error on the first run #}
+          {% set existing_lookup = existing_images_by_digest | default({}) %}
+          {% set existing_digests = existing_lookup.keys() | list %}
+          {% set new_digests = remote_digests | difference(existing_digests) %}
+          {% set common_digests = remote_digests | intersect(existing_digests) %}
+          {% for digest in common_digests %}
+            {% set updated_image = existing_lookup[digest] %}
+            {% set _ = updated_image.update({'tags': remote_images_by_digest[digest].tags}) %}
+            {% set _ = final_list.append(updated_image) %}
+          {% endfor %}
+          {% for digest in new_digests %}
+            {% set _ = final_list.append({
+                  'digest': digest,
+                  'tags': remote_images_by_digest[digest].tags,
+                  'created': remote_images_by_digest[digest].created
+                }) %}
+          {% endfor %}
+          {% if not image_inspector_prune_images %}
+            {% set stale_digests = existing_digests | difference(remote_digests) %}
+            {% for digest in stale_digests %}
+              {% set _ = final_list.append(existing_lookup[digest]) %}
+            {% endfor %}
+          {% endif %}
+          {{ final_list }}
+
+    # # 4. Generate final list and save to YAML file
+    # - name: Generate final list and save to YAML file
+    #   ansible.builtin.copy:
+    #     dest: "{{ yaml_file_path }}"
+    #     content: "{{ lookup('template', 'inventory.yml.j2') }}"
+    #     mode: '0644'
+
+    # 4. Generate final list and save to YAML file
+    - name: Generate final list and save to YAML file
+      ansible.builtin.template:
+        src: inventory.yml.j2
+        dest: "{{ yaml_file_path }}"
+        mode: '0644'

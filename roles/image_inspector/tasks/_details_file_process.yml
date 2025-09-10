@@ -1,0 +1,33 @@
+---
+# This file processes a single inventory file passed via the 'inventory_file' loop variable.
+
+- name: Load image data from file
+  ansible.builtin.include_vars:
+    file: "{{ inventory_file.path }}"
+    name: current_data
+
+- name: Initialize list for updated images in this file
+  ansible.builtin.set_fact:
+    updated_file_images: []
+
+- name: Inspect details for each image in the file
+  ansible.builtin.include_tasks: _details_image_check.yml
+  loop: "{{ current_data.images }}"
+  loop_control:
+    loop_var: image
+    label: "{{ image.digest }}"
+  register: __processed_images
+
+# - name: Save __processed_images to file
+#   ansible.builtin.copy:
+#     dest: "processed_images_{{ current_data.image_path | replace('/', '_') }}.json"
+#     content: "{{ __processed_images | to_nice_json }}"
+#     mode: '0644'
+#   when: __processed_images is defined
+
+- name: Save updated details back to the YAML file
+  ansible.builtin.copy:
+    dest: "{{ inventory_file.path }}"
+    content: "{{ {'image_path': current_data.image_path, 'images': updated_file_images | default(current_data.images) | sort(attribute='created', reverse=True) } | to_yaml }}"
+    mode: '0644'
+  when: updated_file_images | length > 0

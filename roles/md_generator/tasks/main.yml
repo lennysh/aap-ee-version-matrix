@@ -1,0 +1,21 @@
+# md_generator/tasks/main.yml
+---
+- name: "Ensure the output directory exists"
+  ansible.builtin.file:
+    path: "{{ md_generator_output_md_file | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: Find all image var files to process
+  ansible.builtin.find:
+    paths: "{{ md_generator_var_root_path }}"
+    patterns: "*.yml"
+    recurse: true
+  register: yaml_files
+
+- name: Process each var file found
+  ansible.builtin.include_tasks: image_path_loop.yml
+  loop: "{{ yaml_files.files }}"
+  loop_control:
+    loop_var: __var_file
+    label: "{{ __var_file.path }}"

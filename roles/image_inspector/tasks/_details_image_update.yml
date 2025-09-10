@@ -1,0 +1,72 @@
+---
+# This file processes a single image passed via the 'image' loop variable.
+# It expects 'current_data' and 'updated_file_images' to be defined.
+
+- name: "Process image digest: {{ image.digest[-12:] }}"
+  vars:
+    full_image_ref: "{{ current_data.image_path }}@{{ image.digest }}"
+  block:
+    - name: "🔄 Pull image for inspection: {{ full_image_ref }}"
+      ansible.builtin.command: "podman pull {{ full_image_ref }}"
+      register: pull_result
+      changed_when: "'Storing signatures' in pull_result.stdout"
+
+    - name: ↳ Get Ansible and Python versions
+      ansible.builtin.command: "podman run --rm {{ full_image_ref }} ansible --version"
+      register: version_output
+      changed_when: false
+
+    - name: ↳ Get RHEL version
+      ansible.builtin.command: "podman run --rm {{ full_image_ref }} cat /etc/redhat-release"
+      register: rhel_output
+      changed_when: false
+
+    - name: ↳ Get Ansible collections
+      ansible.builtin.command: "podman run --rm {{ full_image_ref }} ansible-galaxy collection list"
+      register: collections_output
+      changed_when: false
+      failed_when: collections_output.rc != 0 and 'ERROR! - None of the provided paths were usable.' not in collections_output.stderr
+
+    - name: ↳ Get system packages (RPM)
+      ansible.builtin.command: "podman run --rm {{ full_image_ref }} rpm -qa --qf '%{NAME} %{VERSION}-%{RELEASE}\\n'"
+      register: rpm_output
+      changed_when: false
+
+    - name: ↳ Get Python packages (Pip)
+      ansible.builtin.command: "podman run --rm {{ full_image_ref }} pip3 freeze"
+      register: pip_output
+      changed_when: false
+
+    - name: ↳ Assemble updated image details
+      ansible.builtin.set_fact:
+        updated_image: "{{ image | combine({
+            'ansible_core_version': (version_output.stdout | regex_search('core (\\S+)') | default('')).split(' ') | last | replace(']', '') | default('n/a'),
+            'python_version': (version_output.stdout | regex_search('python version = (\\S+)') | default('')).split('= ') | last | default('n/a'),
+            'rhel_version': rhel_output.stdout | replace('Red Hat Enterprise Linux release ', '') | replace('Red Hat Enterprise Linux Server release ', '') | trim,
+            'ansible_collections': collections_output.stdout_lines | select('match', '^\\S+\\.\\S+') | map('split') | map('join', ' ') | list,
+            'system_packages': rpm_output.stdout_lines,
+            'pip_packages': pip_output.stdout_lines
+          }) }}"
+
+    # - name: Debug collections_output.stdout_lines
+    #   ansible.builtin.debug:
+    #     msg: "{{ collections_output.stdout_lines | select('match', '^\\S+\\.\\S+') | map('split') | map('join', ' ') | list }}"
+
+    - name: ↳ Add updated image to the list for this file
+      ansible.builtin.set_fact:
+        updated_file_images: "{{ updated_file_images + [updated_image] }}"
+
+  rescue:
+    - name: ❌ Mark image as failed on error
+      ansible.builtin.set_fact:
+        failed_image: "{{ image | combine({'ansible_core_version': 'pull_failed'}) }}"
+
+    - name: ↳ Add failed image to the list
+      ansible.builtin.set_fact:
+        updated_file_images: "{{ updated_file_images + [failed_image] }}"
+
+  always:
+    - name: "✅ Remove pulled image: {{ full_image_ref }}"
+      ansible.builtin.command: "podman rmi {{ full_image_ref }}"
+      changed_when: false
+      failed_when: false # Don't fail if image was already gone or pull failed

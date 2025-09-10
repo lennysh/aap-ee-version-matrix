@@ -1,0 +1,36 @@
+---
+{# Ansible Jinja2 Template Settings -#}
+{%- set ansible_jinja_vars = {'trim_blocks': True, 'lstrip_blocks': True} -%}
+{#-
+  This template generates the final YAML content for an image path.
+-#}
+{%- set final_list = [] -%}
+{%- set remote_digests = remote_images_by_digest.keys() | list -%}
+{%- set existing_lookup = existing_images_by_digest | default({}) -%}
+{%- set existing_digests = existing_lookup.keys() | list -%}
+{%- set new_digests = remote_digests | difference(existing_digests) -%}
+{%- set common_digests = remote_digests | intersect(existing_digests) -%}
+{%- for digest in common_digests -%}
+  {%- set updated_image = existing_lookup[digest] -%}
+  {%- set _ = updated_image.update({'tags': remote_images_by_digest[digest].tags}) -%}
+  {%- set _ = final_list.append(updated_image) -%}
+{%- endfor -%}
+{%- for digest in new_digests -%}
+  {%- set _ = final_list.append({
+        'digest': digest,
+        'tags': remote_images_by_digest[digest].tags,
+        'created': remote_images_by_digest[digest].created
+      }) -%}
+{%- endfor -%}
+{%- if not image_inspector_prune_images -%}
+  {%- set stale_digests = existing_digests | difference(remote_digests) -%}
+  {%- for digest in stale_digests -%}
+    {%- set _ = final_list.append(existing_lookup[digest]) -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- set normalized_final_list = [] -%}
+{%- for image_item in final_list -%}
+  {%- set _ = image_item.update({'tags': image_item.tags | map('string') | list}) -%}
+  {%- set _ = normalized_final_list.append(image_item) -%}
+{%- endfor -%}
+{{- {'image_path': image_path, 'images': normalized_final_list | sort(attribute='created', reverse=True)} | to_yaml -}}

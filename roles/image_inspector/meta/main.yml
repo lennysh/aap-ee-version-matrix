@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Lenny Shirley
+  description: |
+    Inspects container images for Ansible versions, Python versions, system packages, Ansible collections, and Python packages.
+    It also saves the inspection results to YAML VAR files.
+  company: Red Hat
+
+  issue_tracker_url: https://github.com/lennysh/aap-ee-version-matrix/issues
+
+  license: MIT
+
+  min_ansible_version: !!str 2.1
+
+  galaxy_tags: []
+
+dependencies: []
