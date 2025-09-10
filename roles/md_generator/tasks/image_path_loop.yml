@@ -1,0 +1,21 @@
+# md_generator/tasks/main.yml
+---
+- name: "Load image data from the found var file"
+  ansible.builtin.include_vars:
+    file: "{{ __var_file.path }}"
+
+- name: "Ensure the output directory exists"
+  ansible.builtin.file:
+    path: "{{ md_generator_var_root_path }}/{{ image_path }}"
+    state: directory
+    mode: '0755'
+
+- name: "Generate markdown file from template"
+  ansible.builtin.template:
+    src: image_report.md.j2
+    dest: "{{ md_generator_var_root_path }}/{{ image_path }}/README.md"
+    mode: '0644'
+
+- name: "Report generation complete"
+  ansible.builtin.debug:
+    msg: "Markdown report successfully generated at {{ md_generator_var_root_path }}/{{ image_path }}/README.md"

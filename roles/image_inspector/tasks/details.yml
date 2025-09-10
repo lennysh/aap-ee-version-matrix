@@ -1,0 +1,17 @@
+---
+# This file finds all inventory files and then calls another task file
+# to process each one in a loop.
+
+- name: Find all inventory YAML files to process
+  ansible.builtin.find:
+    paths: "{{ image_inspector_output_dir }}"
+    patterns: "*.yml"
+    recurse: true
+  register: yaml_files
+
+- name: Process each inventory file found
+  ansible.builtin.include_tasks: _details_file_process.yml
+  loop: "{{ yaml_files.files }}"
+  loop_control:
+    loop_var: inventory_file
+    # label: "{{ inventory_file }}"

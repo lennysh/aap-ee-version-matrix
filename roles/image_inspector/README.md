@@ -1,0 +1,46 @@
+Image Inspector
+=========
+
+Inspect's container images for Ansible versions, Python versions, system packages, Ansible Collections, and Python packages. It also saves the inspection results to multiple YAML VAR files.
+
+Role Variables
+--------------
+
+```yaml
+# Defaults shown below
+
+# A list of container image paths to query
+image_inspector_image_paths:
+  - "registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8"
+  - "registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9"
+  - "registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8"
+  - "registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9"
+  - "registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8"
+  - "registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9"
+  - "registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8"
+  - "registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9"
+  - "registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8"
+  - "registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9"
+
+# A list of string patterns to exclude from tag discovery results
+image_inspector_exclude_patterns:
+  - "-source"
+  - "sha256"
+
+# The directory where the output YAML files will be saved
+image_inspector_output_dir: "{{ playbook_dir }}/images"
+
+# Controls whether to remove images from the YAML file if they are
+# no longer found in the remote registry. Set to true for 'prune' functionality.
+image_inspector_prune_images: "{{ prune_images | default(false) }}"
+```
+
+License
+-------
+
+MIT
+
+Author Information
+------------------
+
+Lenny Shirley

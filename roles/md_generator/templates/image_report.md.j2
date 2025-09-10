@@ -1,0 +1,19 @@
+{#-
+  This macro takes a list of items (like packages) and renders them
+  inside a collapsible HTML <details> tag for clean markdown output.
+-#}
+{%- macro render_details_list(items) -%}
+{%- if items | default([]) and items | length > 0 -%}
+<details><summary>View ({{ items | length }})</summary>{% for item in items | sort %}`{{ item }}`<br>{% endfor %}</details>
+{%- else -%}
+*None*
+{%- endif -%}
+{%- endmacro -%}
+
+# {{ image_path }}
+
+| Tags | Ansible Version | Python Version | RHEL Version | Ansible Collections | Packages | PIP Packages | Created |
+|---|---|---|---|---|---|---|---|
+{% for image in images %}
+| `{{ image.tags | join('`, `') }}` | {{ image.ansible_core_version | default('N/A') }} | {{ image.python_version | default('N/A') }} | {{ image.rhel_version | default('N/A') }} | {{ render_details_list(image.ansible_collections) }} | {{ render_details_list(image.system_packages) }} | {{ render_details_list(image.pip_packages) }} | {{ image.created }} |
+{% endfor %}

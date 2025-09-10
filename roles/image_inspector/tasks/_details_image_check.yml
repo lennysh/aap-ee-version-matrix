@@ -1,0 +1,34 @@
+---
+# This file processes a single image passed via the 'image' loop variable.
+# It expects 'current_data' and 'updated_file_images' to be defined.
+
+# - name: Initialize image update flag
+#   ansible.builtin.set_fact:
+#     __image_needs_updating: false
+
+- name: Determine if image needs updating
+  ansible.builtin.set_fact:
+    __image_needs_updating: "{{
+      image.ansible_core_version is not defined or
+      not image.ansible_core_version or
+      image.ansible_core_version == 'pull_failed' or
+      image.ansible_collections is not defined
+      }}"
+
+# - name: Mark image for update
+#   ansible.builtin.set_fact:
+#     __image_needs_updating: true
+#   when: >
+#     image.ansible_core_version is not defined or
+#     not image.ansible_core_version or
+#     image.ansible_core_version == 'pull_failed' or
+#     image.ansible_collections is not defined
+
+- name: Inspect details for each image in the file
+  when: __image_needs_updating | default(false)
+  ansible.builtin.include_tasks: _details_image_update.yml
+
+- name: Add pre-existing image to the list for this file
+  when: not __image_needs_updating | default(false)
+  ansible.builtin.set_fact:
+    updated_file_images: "{{ updated_file_images + [image] }}"

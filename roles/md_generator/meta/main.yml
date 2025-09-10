@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  author: Lenny Shirley
+  description: Generates a markdown file from a template for each container image.
+  company: Red Hat
+
+  issue_tracker_url: https://github.com/lennysh/aap-ee-version-matrix/issues
+
+  license: MIT
+
+  min_ansible_version: !!str 2.1
+
+  galaxy_tags: []
+
+dependencies: []
