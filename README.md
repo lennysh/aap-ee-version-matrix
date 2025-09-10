@@ -12,16 +12,16 @@ For easy viewing, the raw data has been converted into a user-friendly Markdown 
 
 | Image Name (Click for more details) | Brief Info | Last<br>Updated |
 | :--------- | :--------: | -----------: |
-| [registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8/README.md) |  | 2025-09-09 05:50:31 UTC |
-| [registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9/README.md) |  | 2025-09-09 02:03:02 UTC |
-| [registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8/README.md) |  | 2025-08-20 23:47:10 UTC |
-| [registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9/README.md) |  | 2025-08-20 23:56:41 UTC |
-| [registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8](./images/registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8/README.md) |  | 2025-08-21 00:27:03 UTC |
-| [registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9](./images/registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9/README.md) |  | 2025-08-21 00:25:36 UTC |
-| [registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8/README.md) |  | 2025-08-21 15:57:28 UTC |
-| [registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9/README.md) |  | 2025-08-21 15:56:34 UTC |
-| [registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8](./images/registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8/README.md) |  | 2025-08-21 16:44:39 UTC |
-| [registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9](./images/registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9/README.md) |  | 2025-08-21 16:40:23 UTC |
+| [registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8/README.md) |  | 2025-09-09<br>05:50:31 UTC |
+| [registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9/README.md) |  | 2025-09-09<br>02:03:02 UTC |
+| [registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8/README.md) |  | 2025-08-20<br>23:47:10 UTC |
+| [registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9/README.md) |  | 2025-08-20<br>23:56:41 UTC |
+| [registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8](./images/registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8/README.md) |  | 2025-08-21<br>00:27:03 UTC |
+| [registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9](./images/registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9/README.md) |  | 2025-08-21<br>00:25:36 UTC |
+| [registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8/README.md) |  | 2025-08-21<br>15:57:28 UTC |
+| [registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9/README.md) |  | 2025-08-21<br>15:56:34 UTC |
+| [registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8](./images/registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8/README.md) |  | 2025-08-21<br>16:44:39 UTC |
+| [registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9](./images/registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9/README.md) |  | 2025-08-21<br>16:40:23 UTC |
 
 [comment]: <> (END Ansible Managed)
 
