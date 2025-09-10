@@ -23,7 +23,7 @@ For easy viewing, the raw data has been converted into a user-friendly Markdown 
 
 Found a mistake or have an update for a new release? Contributions are highly encouraged!
 
-To contribute, please **submit a pull request with your changes to the `AAP_EE.csv` files only**. Do not edit the Markdown file directly, as it is overwritten by the automation script. Once your pull request is merged, the script will be re-run to update the table.
+To contribute, please **submit a pull request with your changes to the Ansible Roles and Playbooks only**. Do not edit the Markdown files directly, as they are overwritten by the Ansible Playbook(s) when executed. The only changes to the Container Image Markdown files that will be accepted are those made directly by the Ansible Playbook/Roles.  Manual updates to those files will NOT be accepted.
 
 ## ✍️ Authors
 
