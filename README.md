@@ -8,18 +8,22 @@ This repository provides a centralized, community-driven tracker for Red Hat Ans
 
 For easy viewing, the raw data has been converted into a user-friendly Markdown table, which is generated from the central CSV file.
 
-| Image Name | Brief Info | Last Updated | More Details |
-| :--------- | :--------: | -----------: | :----------: |
-| registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8/README.md)
-| registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9/README.md)
-| registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8/README.md)
-| registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9/README.md)
-| registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8/README.md)
-| registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9/README.md)
-| registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8/README.md)
-| registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9/README.md)
-| registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8/README.md)
-| registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9 |  |  | [Details](./images/registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9/README.md)
+[comment]: <> (BEGIN Ansible Managed)
+
+| Image Name (Click for more details) | Brief Info | Last Updated |
+| :--------- | :--------: | -----------: |
+| [registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8/README.md) |  |  |
+| [registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9/README.md) |  |  |
+| [registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8/README.md) |  |  |
+| [registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9/README.md) |  |  |
+| [registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8](./images/registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8/README.md) |  |  |
+| [registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9](./images/registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9/README.md) |  |  |
+| [registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel8/README.md) |  |  |
+| [registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9/README.md) |  |  |
+| [registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8](./images/registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8/README.md) |  |  |
+| [registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9](./images/registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9/README.md) |  |  |
+
+[comment]: <> (END Ansible Managed)
 
 ## 🤝 Contributing
 
