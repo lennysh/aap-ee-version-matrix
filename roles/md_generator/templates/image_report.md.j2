@@ -12,8 +12,30 @@
 
 # {{ image_path }}
 
+{# Step 1: Manually group all images into a dictionary. #}
+{# The keys will be version groups (e.g., '2.16') and the values will be lists of image objects. #}
+{%- set grouped_images = {} %}
+{%- for image in images %}
+  {%- set version_group = image.ansible_core_version.split('.')[0:2] | join('.') %}
+  {%- if version_group not in grouped_images %}
+    {%- set _ = grouped_images.update({version_group: []}) %}
+  {%- endif %}
+  {%- set _ = grouped_images[version_group].append(image) %}
+{%- endfor -%}
+
+{# Step 2: Iterate over the created groups. Sort the groups by version number (descending). #}
+{% for version_group, image_list in grouped_images.items() | sort(reverse=True) -%}
+
+## Ansible Core {{ version_group }}.*
+
 | Tags | Ansible Version | Python Version | RHEL Version | Ansible Collections | Packages | PIP Packages | Created |
 |---|---|---|---|---|---|---|---|
-{% for image in images %}
+{#
+  Step 3: For each group, sort its list of images by the 'created' date (descending)
+  and then print the row for each image.
+-#}
+{% for image in image_list | sort(attribute='created', reverse=True) %}
 | `{{ image.tags | join('`, `') }}` | {{ image.ansible_core_version | default('N/A') }} | {{ image.python_version | default('N/A') }} | {{ image.rhel_version | default('N/A') }} | {{ render_details_list(image.ansible_collections) }} | {{ render_details_list(image.system_packages) }} | {{ render_details_list(image.pip_packages) }} | {{ image.created }} |
+{% endfor %}
+
 {% endfor %}
