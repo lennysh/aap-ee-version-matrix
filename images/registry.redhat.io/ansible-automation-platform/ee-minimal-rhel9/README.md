@@ -1,5 +1,10 @@
 # registry.redhat.io/ansible-automation-platform/ee-minimal-rhel9
 
+- [Ansible Core 2.18.*](#ansible-core-218): 15 image(s)
+- [Ansible Core 2.17.*](#ansible-core-217): 20 image(s)
+- [Ansible Core 2.16.*](#ansible-core-216): 22 image(s)
+- [Ansible Core 2.15.*](#ansible-core-215): 26 image(s)
+
 ## Ansible Core 2.18.*
 
 | Tags | Ansible Version | Python Version | RHEL Version | Ansible Collections | Packages | PIP Packages | Created |

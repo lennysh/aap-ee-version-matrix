@@ -1,5 +1,7 @@
 # registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8
 
+- [Ansible Core 2.15.*](#ansible-core-215): 37 image(s)
+
 ## Ansible Core 2.15.*
 
 | Tags | Ansible Version | Python Version | RHEL Version | Ansible Collections | Packages | PIP Packages | Created |

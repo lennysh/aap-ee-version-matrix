@@ -23,6 +23,10 @@
   {%- set _ = grouped_images[version_group].append(image) %}
 {%- endfor -%}
 
+{% for version_group, image_list in grouped_images.items() | sort(reverse=True) -%}
+- [Ansible Core {{ version_group }}.*](#{{ 'ansible-core-' + version_group | replace('.', '') }}): {{ image_list | length }} image(s)
+{% endfor %}
+
 {# Step 2: Iterate over the created groups. Sort the groups by version number (descending). #}
 {% for version_group, image_list in grouped_images.items() | sort(reverse=True) -%}
 

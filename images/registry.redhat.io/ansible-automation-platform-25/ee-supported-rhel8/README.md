@@ -1,5 +1,7 @@
 # registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8
 
+- [Ansible Core 2.16.*](#ansible-core-216): 22 image(s)
+
 ## Ansible Core 2.16.*
 
 | Tags | Ansible Version | Python Version | RHEL Version | Ansible Collections | Packages | PIP Packages | Created |
