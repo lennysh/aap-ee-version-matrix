@@ -87,44 +87,6 @@
         label: "{{ image_path }}@{{ item.digest }}"
       when: existing_yaml_stat.stat.exists
 
-    # 3. Compare and generate the final list
-    - name: "Generate final image list for {{ image_path }}"
-      ansible.builtin.set_fact:
-        final_image_list: >
-          {% set final_list = [] %}
-          {% set remote_digests = remote_images_by_digest.keys() | list %}
-          {# Below, we provide a default empty dictionary to prevent the error on the first run #}
-          {% set existing_lookup = existing_images_by_digest | default({}) %}
-          {% set existing_digests = existing_lookup.keys() | list %}
-          {% set new_digests = remote_digests | difference(existing_digests) %}
-          {% set common_digests = remote_digests | intersect(existing_digests) %}
-          {% for digest in common_digests %}
-            {% set updated_image = existing_lookup[digest] %}
-            {% set _ = updated_image.update({'tags': remote_images_by_digest[digest].tags}) %}
-            {% set _ = final_list.append(updated_image) %}
-          {% endfor %}
-          {% for digest in new_digests %}
-            {% set _ = final_list.append({
-                  'digest': digest,
-                  'tags': remote_images_by_digest[digest].tags,
-                  'created': remote_images_by_digest[digest].created
-                }) %}
-          {% endfor %}
-          {% if not image_inspector_prune_images %}
-            {% set stale_digests = existing_digests | difference(remote_digests) %}
-            {% for digest in stale_digests %}
-              {% set _ = final_list.append(existing_lookup[digest]) %}
-            {% endfor %}
-          {% endif %}
-          {{ final_list }}
-
-    # # 4. Generate final list and save to YAML file
-    # - name: Generate final list and save to YAML file
-    #   ansible.builtin.copy:
-    #     dest: "{{ yaml_file_path }}"
-    #     content: "{{ lookup('template', 'inventory.yml.j2') }}"
-    #     mode: '0644'
-
     # 4. Generate final list and save to YAML file
     - name: Generate final list and save to YAML file
       ansible.builtin.template:

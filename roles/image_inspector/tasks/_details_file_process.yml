@@ -28,6 +28,8 @@
 - name: Save updated details back to the YAML file
   ansible.builtin.copy:
     dest: "{{ inventory_file.path }}"
-    content: "{{ {'image_path': current_data.image_path, 'images': updated_file_images | default(current_data.images) | sort(attribute='created', reverse=True) } | to_yaml }}"
+    content: |
+      ---
+      {{ {'image_path': current_data.image_path, 'images': updated_file_images | default(current_data.images) | sort(attribute='created', reverse=True)} | to_yaml }}
     mode: '0644'
   when: updated_file_images | length > 0
