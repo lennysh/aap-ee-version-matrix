@@ -1,5 +1,9 @@
+---
 image_path: registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel9
 images:
+- created: 2025-09-17 01:05:05 UTC
+  digest: sha256:78ef7a5f20af1f14a47daed076852abaca476ede1e0133752a75089521f83a1d
+  tags: ['1.0', 1.0.0, 1.0.0-1087, latest]
 - ansible_collections: [amazon.aws 6.4.0, ansible.controller 4.5.25, ansible.netcommon
       6.0.0, ansible.network 3.0.0, ansible.posix 1.5.4, ansible.scm 2.0.0, ansible.security
       2.0.0, ansible.snmp 2.0.0, ansible.utils 5.1.2, ansible.windows 2.8.0, ansible.yang
@@ -166,7 +170,7 @@ images:
     python3-websocket-client 1.5.1-1.el9ap, python3-pytz 2021.3-2.el9pc, python3-pbr
       5.8.1-2.el9ap, python3-jmespath 0.10.0-5.el9ap, python3-grpcio 1.58.3-1.el9ap,
     automation-controller-cli 4.5.25-1.el9ap]
-  tags: ['1.0', 1.0.0, 1.0.0-1073, latest]
+  tags: [1.0.0-1073]
 - ansible_collections: [amazon.aws 6.4.0, ansible.controller 4.5.24, ansible.netcommon
       6.0.0, ansible.network 3.0.0, ansible.posix 1.5.4, ansible.scm 2.0.0, ansible.security
       2.0.0, ansible.snmp 2.0.0, ansible.utils 5.1.2, ansible.windows 2.8.0, ansible.yang
