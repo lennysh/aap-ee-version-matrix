@@ -1,6 +1,9 @@
 ---
 image_path: registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9
 images:
+- created: 2025-09-17 21:02:24 UTC
+  digest: sha256:ae7e6d8f0f66f9a33aa8f619285ef0f7bea47843bb5e83cd3d339ad9ce755e03
+  tags: ['1.0', 1.0.0, 1.0.0-968, latest]
 - ansible_collections: []
   ansible_core_version: 2.16.14
   created: 2025-08-21 15:56:34 UTC
@@ -85,7 +88,7 @@ images:
       24.1.0-1.el9ap, python3.11-lxml 4.9.2-4.el9, krb5-workstation 1.21.1-8.el9_6,
     zstd 1.5.5-1.el9, unzip 6.0-58.el9_5, bzip2 1.0.8-10.el9_5, tar 1.34-7.el9, file
       5.39-16.el9, xz 5.2.5-8.el9_0, tzdata 2025b-1.el9]
-  tags: ['1.0', 1.0.0, 1.0.0-956, latest]
+  tags: [1.0.0-956]
 - ansible_collections: []
   ansible_core_version: 2.16.14
   created: 2025-07-24 19:04:50 UTC

@@ -895,7 +895,7 @@ images:
       37.0.2-6.el8, krb5-workstation 1.18.2-32.el8_10, tar 1.30-10.el8_10, bzip2 1.0.6-28.el8_10,
     python3.11-setuptools 65.5.1-4.el8_10, python3.11-charset-normalizer 2.1.0-1.el8,
     zstd 1.4.4-1.el8, tzdata 2025b-1.el8]
-  tags: [2.17.13, 2.17.13-3]
+  tags: [2.17.13]
 - ansible_collections: []
   ansible_core_version: 2.18.7
   created: 2025-07-23 21:15:25 UTC
@@ -6301,7 +6301,7 @@ images:
     git-core 2.43.5-1.el8_10, krb5-workstation 1.18.2-29.el8_10, xz 5.2.4-4.el8_6,
     bzip2 1.0.6-26.el8, python3.11-pyyaml 6.0-1.el8, sshpass 1.09-4.el8, python3.11-attrs
       22.1.0-1.el8]
-  tags: [2.17.4, 2.17.4-3]
+  tags: [2.17.4]
 - ansible_collections: []
   ansible_core_version: 2.16.11
   created: 2024-09-16 19:32:21 UTC
@@ -6962,7 +6962,7 @@ images:
     python3.11-cffi 1.15.1-1.el8, python3.11-urllib3 1.26.12-2.el8, git-core 2.43.5-1.el8_10,
     krb5-workstation 1.18.2-28.el8_10, xz 5.2.4-4.el8_6, bzip2 1.0.6-26.el8, python3.11-pyyaml
       6.0-1.el8, sshpass 1.09-4.el8, python3.11-attrs 22.1.0-1.el8]
-  tags: [2.16.9, 2.16.9-2]
+  tags: [2.16.9]
 - ansible_collections: []
   ansible_core_version: 2.17.1
   created: 2024-07-15 14:23:34 UTC
@@ -12812,7 +12812,7 @@ images:
     python39-attrs 21.4.0-2.el8pc, python39-ansible-compat 2.2.1-1.el8ap, ansible-runner
       2.3.0-1.el8ap, python39-requests 2.25.0-2.module+el8.4.0+9822+20bf1249, krb5-workstation
       1.18.2-21.el8, xz 5.2.4-4.el8_6, zstd 1.4.4-1.el8]
-  tags: [2.14.0, 2.14.0-14]
+  tags: [2.14.0]
 - ansible_collections: []
   ansible_core_version: 2.13.6
   created: 2022-11-07 21:25:09 UTC
@@ -12891,7 +12891,7 @@ images:
       0.12.2-1.el8ap, python39-daemon 2.3.0-4.el8ap, python39-bracex 2.2.1-2.el8pc,
     ansible-lint 6.0.2-3.el8ap, python39-requests 2.25.0-2.module+el8.4.0+9822+20bf1249,
     krb5-workstation 1.18.2-14.el8, tar 1.30-5.el8, zstd 1.4.4-1.el8]
-  tags: [2.13.6, 2.13.6-1]
+  tags: [2.13.6-1]
 - ansible_collections: []
   ansible_core_version: 2.12.10
   created: 2022-11-07 21:23:42 UTC
