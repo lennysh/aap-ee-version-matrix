@@ -35,9 +35,9 @@
       register: pip_output
       changed_when: false
 
-    - name: ↳ Assemble updated image details
+    - name: ↳ Assemble updated image details and set final fact
       ansible.builtin.set_fact:
-        updated_image: "{{ image | combine({
+        processed_image: "{{ image | combine({
             'ansible_core_version': (version_output.stdout | regex_search('core (\\S+)') | default('')).split(' ') | last | replace(']', '') | default('n/a'),
             'python_version': (version_output.stdout | regex_search('python version = (\\S+)') | default('')).split('= ') | last | default('n/a'),
             'rhel_version': rhel_output.stdout | replace('Red Hat Enterprise Linux release ', '') | replace('Red Hat Enterprise Linux Server release ', '') | trim,
@@ -46,20 +46,16 @@
             'pip_packages': pip_output.stdout_lines
           }) }}"
 
-    - name: ↳ Add updated image to the list for this file
-      ansible.builtin.set_fact:
-        updated_file_images: "{{ updated_file_images + [updated_image] }}"
-
   rescue:
-    - name: ❌ Mark image as failed on error
+    - name: ❌ Mark image as failed on error and set final fact
       ansible.builtin.set_fact:
-        failed_image: "{{ image | combine({'ansible_core_version': 'pull_failed'}) }}"
-
-    - name: ↳ Add failed image to the list
-      ansible.builtin.set_fact:
-        updated_file_images: "{{ updated_file_images + [failed_image] }}"
+        processed_image: "{{ image | combine({'ansible_core_version': 'pull_failed'}) }}"
 
   always:
+    - name: ↳ Add image to the list
+      ansible.builtin.set_fact:
+        processed_images: "{{ processed_images | default([]) + [processed_image] }}"
+
     - name: "✅ Remove pulled image: {{ full_image_ref }}"
       ansible.builtin.command: "podman rmi {{ full_image_ref }}"
       changed_when: false

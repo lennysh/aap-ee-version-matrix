@@ -5,23 +5,60 @@
     file: "{{ inventory_file.path }}"
     name: current_data
 
-- name: Initialize list for updated images in this file
+- name: Partition images into 'to_update' and 'ok' lists
+  vars:
+    # This JMESPath query identifies images that need their details to be inspected.
+    images_to_update_query: >-
+      [?
+        !ansible_core_version ||
+        type(ansible_core_version) == 'null' ||
+        ansible_core_version == '' ||
+        ansible_core_version == 'pull_failed' ||
+        type(ansible_collections) == 'null' ||
+        type(pip_packages) == 'null' ||
+        type(python_version) == 'null' ||
+        type(rhel_version) == 'null' ||
+        type(system_packages) == 'null' ||
+        type(tags) == 'null'
+      ]
+    # This JMESPath query identifies images that are already up-to-date.
+    images_ok_query: >-
+      [?
+        ansible_core_version &&
+        type(ansible_core_version) != 'null' &&
+        ansible_core_version != '' &&
+        ansible_core_version != 'pull_failed' &&
+        type(ansible_collections) != 'null' &&
+        type(pip_packages) != 'null' &&
+        type(python_version) != 'null' &&
+        type(rhel_version) != 'null' &&
+        type(system_packages) != 'null' &&
+        type(tags) != 'null'
+      ]
   ansible.builtin.set_fact:
-    updated_file_images: []
+    images_to_update: "{{ current_data.images | community.general.json_query(images_to_update_query) }}"
+    images_ok: "{{ current_data.images | community.general.json_query(images_ok_query) }}"
 
-- name: Inspect details for each image in the file
-  ansible.builtin.include_tasks: _details_image_check.yml
-  loop: "{{ current_data.images }}"
-  loop_control:
-    loop_var: image
-    label: "{{ image.digest }}"
-  register: __processed_images
+- name: Fail if total image count does not match partitioned counts
+  ansible.builtin.assert:
+    that:
+      - (images_to_update | length) + (images_ok | length) == (current_data.images | length)
+    fail_msg: "Image count mismatch in file {{ inventory_file.path }}: total {{ current_data.images | length }}, to update {{ images_to_update | length }}, ok {{ images_ok | length }}"
 
-- name: Save updated details back to the YAML file
-  ansible.builtin.copy:
-    dest: "{{ inventory_file.path }}"
-    content: |
-      ---
-      {{ {'image_path': current_data.image_path, 'images': updated_file_images | default(current_data.images) | sort(attribute='created', reverse=True)} | to_yaml }}
-    mode: '0644'
-  when: updated_file_images | length > 0
+- name: Image Update Inspection Block
+  when: images_to_update | length > 0
+  block:
+    - name: Inspect details for each image that needs an update
+      ansible.builtin.include_tasks: _details_image_update.yml
+      loop: "{{ images_to_update }}"
+      loop_control:
+        loop_var: image
+        label: "{{ image.digest }}"
+
+    - name: Combine updated images with existing images and save to file
+      ansible.builtin.copy:
+        dest: "{{ inventory_file.path }}"
+        content: |
+          ---
+          {{ {'image_path': current_data.image_path, 'images': (images_ok + (processed_images | default([]))) | sort(attribute='created', reverse=True)} | to_yaml }}
+        mode: '0644'

@@ -12,3 +12,4 @@
   loop: "{{ yaml_files.files }}"
   loop_control:
     loop_var: inventory_file
+    label: "hidden"
