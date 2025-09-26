@@ -1,6 +1,4 @@
 ---
-# This file processes a single image passed via the 'image' loop variable.
-# It expects 'current_data' and 'updated_file_images' to be defined.
 
 - name: "Process image digest: {{ image.digest[-12:] }}"
   vars:
@@ -48,10 +46,6 @@
             'pip_packages': pip_output.stdout_lines
           }) }}"
 
-    # - name: Debug collections_output.stdout_lines
-    #   ansible.builtin.debug:
-    #     msg: "{{ collections_output.stdout_lines | select('match', '^\\S+\\.\\S+') | map('split') | map('join', ' ') | list }}"
-
     - name: ↳ Add updated image to the list for this file
       ansible.builtin.set_fact:
         updated_file_images: "{{ updated_file_images + [updated_image] }}"
@@ -69,4 +63,4 @@
     - name: "✅ Remove pulled image: {{ full_image_ref }}"
       ansible.builtin.command: "podman rmi {{ full_image_ref }}"
       changed_when: false
-      failed_when: false # Don't fail if image was already gone or pull failed
+      failed_when: false

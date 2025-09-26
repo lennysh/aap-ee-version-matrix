@@ -1,5 +1,4 @@
 ---
-# This file processes a single inventory file passed via the 'inventory_file' loop variable.
 
 - name: Load image data from file
   ansible.builtin.include_vars:
@@ -17,13 +16,6 @@
     loop_var: image
     label: "{{ image.digest }}"
   register: __processed_images
-
-# - name: Save __processed_images to file
-#   ansible.builtin.copy:
-#     dest: "processed_images_{{ current_data.image_path | replace('/', '_') }}.json"
-#     content: "{{ __processed_images | to_nice_json }}"
-#     mode: '0644'
-#   when: __processed_images is defined
 
 - name: Save updated details back to the YAML file
   ansible.builtin.copy:
