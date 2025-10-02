@@ -24,6 +24,8 @@ The tables below are automatically generated. Click on an image name to see deta
 | [registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9](./images/registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9/README.md) |
 | [registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel9/README.md) |
 | [registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel9](./images/registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel9/README.md) |
+| [registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel8](./images/registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel8/README.md) |
+| [registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel9](./images/registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel9/README.md) |
 
 [comment]: <> (END Ansible Managed)
 
