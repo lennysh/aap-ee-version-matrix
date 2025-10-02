@@ -13,6 +13,10 @@ image_inspector_image_paths:
   - "registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9"
   - "registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8"
   - "registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9"
+  - "registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel9"
+  - "registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel9"
+  - "registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel8"
+  - "registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel9"
 
 # A list of string patterns to exclude from tag discovery results
 image_inspector_exclude_patterns:
