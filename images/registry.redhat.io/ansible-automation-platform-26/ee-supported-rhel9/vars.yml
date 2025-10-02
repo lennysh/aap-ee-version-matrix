@@ -1,3 +1,6 @@
 ---
 image_path: registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel9
-images: []
+images:
+- created: 2025-09-24 01:31:34 UTC
+  digest: sha256:2534d07f1ae41af32adb681e283cbaea465cbe0f9d234ed5478a7bfad7676e7f
+  tags: ['1.0', 1.0.0, 1.0.0-1096, latest]
