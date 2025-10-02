@@ -198,4 +198,3 @@ images:
     python3.11-chardet 5.2.0-2.el9ap, python3.11-async-timeout 4.0.3-2.el9ap, automation-controller-cli
       4.7.1-1.el9ap]
   tags: ['1.0', 1.0.0, 1.0.0-1096, latest]
-  
