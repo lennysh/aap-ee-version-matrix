@@ -928,7 +928,7 @@ images:
       6.0-58.el9_5, bzip2 1.0.8-10.el9_5, tar 1.34-7.el9, xz 5.2.5-8.el9_0, python3.11-setuptools
       65.5.1-3.el9, python3.11-pyyaml 6.0-1.el9, python3.11-charset-normalizer 2.1.0-1.el9,
     sshpass 1.09-4.el9, python3.11-attrs 22.1.0-1.el9, tzdata 2025b-1.el9]
-  tags: [2.17.13]
+  tags: [2.17.13, 2.17.13-4]
 - ansible_collections: []
   ansible_core_version: 2.18.7
   created: 2025-07-23 21:14:13 UTC
