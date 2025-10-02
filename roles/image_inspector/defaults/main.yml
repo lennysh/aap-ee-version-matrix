@@ -1,6 +1,9 @@
 ---
 # defaults file for image_inspector
 
+# The root path where the image VAR files are located
+image_inspector_var_root_path: "{{ playbook_dir }}/images"
+
 # A list of container image paths to query
 image_inspector_image_paths:
   - "registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8"
@@ -14,7 +17,9 @@ image_inspector_image_paths:
   - "registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8"
   - "registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9"
   - "registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel9"
+  # - "registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel10"
   - "registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel9"
+  # - "registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel10"
   - "registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel8"
   - "registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel9"
 

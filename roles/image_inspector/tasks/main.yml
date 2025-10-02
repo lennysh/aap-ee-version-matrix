@@ -7,6 +7,24 @@
     state: directory
     mode: '0755'
 
+# - name: Find all image var files to process
+#   ansible.builtin.find:
+#     paths: "{{ image_inspector_var_root_path }}"
+#     patterns: "*.yml"
+#     recurse: true
+#   register: yaml_files
+#   tags: [always, discover]
+
+# - name: Include and loop over discovery tasks for each image path
+#   ansible.builtin.include_tasks:
+#     file: discover.yml
+#     apply:
+#       tags: [discover]
+#   tags: [always, discover]
+#   loop: "{{ yaml_files.files | map(attribute='path') | list }}"
+#   loop_control:
+#     loop_var: image_path
+
 - name: Include and loop over discovery tasks for each image path
   ansible.builtin.include_tasks:
     file: discover.yml

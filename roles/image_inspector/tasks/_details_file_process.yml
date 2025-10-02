@@ -1,5 +1,9 @@
 ---
 
+- name: Init current_data variable
+  ansible.builtin.set_fact:
+    current_data: {}
+
 - name: Load image data from file
   ansible.builtin.include_vars:
     file: "{{ inventory_file.path }}"
