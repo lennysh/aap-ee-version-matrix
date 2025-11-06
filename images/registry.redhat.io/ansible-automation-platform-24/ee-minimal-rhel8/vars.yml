@@ -1,6 +1,9 @@
 ---
 image_path: registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel8
 images:
+- created: 2025-10-15 22:32:45 UTC
+  digest: sha256:10f8225b9a1dc6d49ec34ccff6f509daffbef5123525964f2b10d5fc8b0e8690
+  tags: ['1.0', 1.0.0, 1.0.0-981, latest]
 - ansible_collections: []
   ansible_core_version: 2.15.13
   created: 2025-09-17 00:44:34 UTC
@@ -86,7 +89,7 @@ images:
       4.16.0-1.el8ap, ansible-runner 2.3.6-1.el8ap, python39-pyOpenSSL 24.1.0-1.el8ap,
     krb5-workstation 1.18.2-32.el8_10, tar 1.30-11.el8_10, bzip2 1.0.6-28.el8_10,
     zstd 1.4.4-1.el8]
-  tags: ['1.0', 1.0.0, 1.0.0-965, latest]
+  tags: [1.0.0-965]
 - ansible_collections: []
   ansible_core_version: 2.15.13
   created: 2025-08-20 23:47:10 UTC

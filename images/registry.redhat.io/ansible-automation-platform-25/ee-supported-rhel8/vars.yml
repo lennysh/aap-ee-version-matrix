@@ -1,6 +1,9 @@
 ---
 image_path: registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8
 images:
+- created: 2025-10-16 03:35:35 UTC
+  digest: sha256:cb92687c7b7926d06e1683b07fbe5dc10fc22f6c052fb1dface041ef84c1f2cd
+  tags: ['1.0', 1.0.0, 1.0.0-1109, latest]
 - ansible_collections: [amazon.aws 9.2.0, ansible.controller 4.6.20, ansible.eda 2.10.0,
     ansible.hub 1.0.0, ansible.netcommon 7.1.0, ansible.network 4.0.0, ansible.platform
       2.5.20250702, ansible.posix 1.5.4, ansible.scm 3.0.0, ansible.security 3.0.0,
@@ -189,7 +192,7 @@ images:
       0.190-2.el8, dbus-common 1.12.8-27.el8_10, systemd 239-82.el8_10.5, libaio 0.3.112-1.el8,
     mailcap 2.1.48-3.el8, pkgconf 1.4.2-1.el8, bash-completion 2.7-5.el8, python3.11-wrapt
       1.16.0-1.el8ap, python3.11-aiodns 3.2.0-1.el8ap, python3.11-gnupg 0.5.2-1.el8ap]
-  tags: ['1.0', 1.0.0, 1.0.0-1091, latest]
+  tags: [1.0.0-1091]
 - ansible_collections: [amazon.aws 9.2.0, ansible.controller 4.6.19, ansible.eda 2.9.0,
     ansible.hub 1.0.0, ansible.netcommon 7.1.0, ansible.network 4.0.0, ansible.platform
       2.5.20250702, ansible.posix 1.5.4, ansible.scm 3.0.0, ansible.security 3.0.0,

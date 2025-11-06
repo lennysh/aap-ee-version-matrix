@@ -1,6 +1,15 @@
 ---
 image_path: registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel9
 images:
+- created: 2025-11-01 04:55:26 UTC
+  digest: sha256:5389e9a1acb81fd409a2d015b764c69e0f0b818d35089b14a026f7a841c04da9
+  tags: ['1.0', 1.0.0, 1.0.0-1105, latest]
+- created: 2025-10-23 16:29:31 UTC
+  digest: sha256:d8e816217dc7ce1ccd1791fb3386b65d490638341bcc5bda11a8e07ae739dd24
+  tags: [1.0.0-1104]
+- created: 2025-10-10 22:47:42 UTC
+  digest: sha256:8b51f6026000a9f63e8d548e5d4c7b630425bc4504819ceeef97eea691653cd2
+  tags: [1.0.0-1103]
 - ansible_collections: [amazon.aws 9.5.1, ansible.controller 4.7.1, ansible.eda 2.10.0,
     ansible.hub 1.0.1, ansible.netcommon 8.1.0, ansible.network 5.0.0, ansible.platform
       2.6.20250924, ansible.posix 2.1.0, ansible.scm 3.0.0, ansible.security 5.0.0,
@@ -197,4 +206,4 @@ images:
       1.58.3-1.el9ap, python3.11-dpath 2.1.6-1.el9ap, python3.11-distro 1.9.0-1.el9ap,
     python3.11-chardet 5.2.0-2.el9ap, python3.11-async-timeout 4.0.3-2.el9ap, automation-controller-cli
       4.7.1-1.el9ap]
-  tags: ['1.0', 1.0.0, 1.0.0-1096, latest]
+  tags: [1.0.0-1096]
