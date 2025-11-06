@@ -11,5 +11,5 @@
   ansible.builtin.include_tasks: _details_file_process.yml
   loop: "{{ yaml_files.files }}"
   loop_control:
-    loop_var: inventory_file
+    loop_var: __file
     label: "hidden"

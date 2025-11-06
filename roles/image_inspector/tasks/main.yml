@@ -30,7 +30,7 @@
     file: discover.yml
     apply:
       tags: [discover]
-  tags: [always, discover]
+  tags: [discover]
   loop: "{{ image_inspector_image_paths }}"
   loop_control:
     loop_var: image_path

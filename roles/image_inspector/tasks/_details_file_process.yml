@@ -1,12 +1,11 @@
 ---
-
-- name: Init current_data variable
-  ansible.builtin.set_fact:
-    current_data: {}
+# - name: Init current_data variable
+#   ansible.builtin.set_fact:
+#     current_data: {}
 
 - name: Load image data from file
   ansible.builtin.include_vars:
-    file: "{{ inventory_file.path }}"
+    file: "{{ __file.path }}"
     name: current_data
 
 - name: Partition images into 'to_update' and 'ok' lists
@@ -47,7 +46,9 @@
   ansible.builtin.assert:
     that:
       - (images_to_update | length) + (images_ok | length) == (current_data.images | length)
-    fail_msg: "Image count mismatch in file {{ inventory_file.path }}: total {{ current_data.images | length }}, to update {{ images_to_update | length }}, ok {{ images_ok | length }}"
+    fail_msg: >-
+      Image count mismatch in file {{ __file.path }}: total {{ current_data.images | length }},
+      to update {{ images_to_update | length }}, ok {{ images_ok | length }}
 
 - name: Image Update Inspection Block
   when: images_to_update | length > 0
@@ -61,8 +62,13 @@
 
     - name: Combine updated images with existing images and save to file
       ansible.builtin.copy:
-        dest: "{{ inventory_file.path }}"
+        dest: "{{ __file.path }}"
         content: |
           ---
-          {{ {'image_path': current_data.image_path, 'images': (images_ok + (processed_images | default([]))) | sort(attribute='created', reverse=True)} | to_yaml }}
+          {{ (
+            {
+              'image_path': current_data.image_path,
+              'images': (images_ok + (processed_images | default([]))) | sort(attribute='created', reverse=True)
+            }
+          ) | to_yaml }}
         mode: '0644'
