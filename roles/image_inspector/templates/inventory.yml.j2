@@ -4,33 +4,37 @@
 {#-
   This template generates the final YAML content for an image path.
 -#}
-{%- set final_list = [] -%}
+{%- set final_dict = {} -%}
 {%- set remote_digests = remote_images_by_digest.keys() | list -%}
 {%- set existing_lookup = existing_images_by_digest | default({}) -%}
 {%- set existing_digests = existing_lookup.keys() | list -%}
 {%- set new_digests = remote_digests | difference(existing_digests) -%}
 {%- set common_digests = remote_digests | intersect(existing_digests) -%}
+{# Process common digests: update tags but preserve all other fields #}
 {%- for digest in common_digests -%}
-  {%- set updated_image = existing_lookup[digest] -%}
-  {%- set _ = updated_image.update({'tags': remote_images_by_digest[digest].tags}) -%}
-  {%- set _ = final_list.append(updated_image) -%}
+  {%- set base_image = existing_lookup[digest] -%}
+  {%- set updated_image = base_image | combine({'tags': remote_images_by_digest[digest].tags}) -%}
+  {%- set _ = final_dict.update({digest: updated_image}) -%}
 {%- endfor -%}
+{# Process new digests #}
 {%- for digest in new_digests -%}
-  {%- set _ = final_list.append({
+  {%- set _ = final_dict.update({digest: {
         'digest': digest,
         'tags': remote_images_by_digest[digest].tags,
         'created': remote_images_by_digest[digest].created
-      }) -%}
+      }}) -%}
 {%- endfor -%}
+{# Add stale digests if not pruning #}
 {%- if not image_inspector_prune_images -%}
   {%- set stale_digests = existing_digests | difference(remote_digests) -%}
   {%- for digest in stale_digests -%}
-    {%- set _ = final_list.append(existing_lookup[digest]) -%}
+    {%- set _ = final_dict.update({digest: existing_lookup[digest]}) -%}
   {%- endfor -%}
 {%- endif -%}
+{# Normalize tags and convert to list #}
 {%- set normalized_final_list = [] -%}
-{%- for image_item in final_list -%}
-  {%- set _ = image_item.update({'tags': image_item.tags | map('string') | list}) -%}
-  {%- set _ = normalized_final_list.append(image_item) -%}
+{%- for digest, image_item in final_dict.items() -%}
+  {%- set normalized_image = image_item | combine({'tags': image_item.tags | map('string') | list}) -%}
+  {%- set _ = normalized_final_list.append(normalized_image) -%}
 {%- endfor -%}
 {{- {'image_path': image_path, 'images': normalized_final_list | sort(attribute='created', reverse=True)} | to_yaml -}}

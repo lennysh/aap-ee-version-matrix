@@ -35,6 +35,10 @@
       register: pip_output
       changed_when: false
 
+    - name: ↳ Preserve original tags before processing
+      ansible.builtin.set_fact:
+        original_tags: "{{ image.tags | default([]) | list }}"
+    
     - name: ↳ Assemble updated image details and set final fact
       ansible.builtin.set_fact:
         processed_image: "{{ image | combine({
@@ -43,15 +47,33 @@
             'rhel_version': rhel_output.stdout | replace('Red Hat Enterprise Linux release ', '') | replace('Red Hat Enterprise Linux Server release ', '') | trim,
             'ansible_collections': collections_output.stdout_lines | select('match', '^\\S+\\.\\S+') | map('split') | map('join', ' ') | list,
             'system_packages': rpm_output.stdout_lines,
-            'pip_packages': pip_output.stdout_lines
+            'pip_packages': pip_output.stdout_lines,
+            'tags': original_tags
           }) }}"
 
   rescue:
+    - name: ↳ Preserve original tags on error
+      ansible.builtin.set_fact:
+        original_tags: "{{ image.tags | default([]) | list }}"
+    
     - name: ❌ Mark image as failed on error and set final fact
       ansible.builtin.set_fact:
-        processed_image: "{{ image | combine({'ansible_core_version': 'pull_failed'}) }}"
+        processed_image: "{{ image | combine({
+            'ansible_core_version': 'pull_failed',
+            'tags': original_tags
+          }) }}"
 
   always:
+    - name: ↳ Verify processed_image has correct digest and tags
+      ansible.builtin.assert:
+        that:
+          - processed_image.digest == image.digest
+          - processed_image.tags | sort == original_tags | sort
+        fail_msg: >-
+          ERROR: processed_image tags don't match original for digest {{ image.digest }}!
+          Original tags: {{ original_tags }}
+          Processed tags: {{ processed_image.tags }}
+    
     - name: ↳ Add image to the list
       ansible.builtin.set_fact:
         processed_images: "{{ processed_images | default([]) + [processed_image] }}"

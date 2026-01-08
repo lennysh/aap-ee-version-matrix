@@ -77,7 +77,7 @@
     - name: Initialize existing images by digest dictionary
       ansible.builtin.set_fact:
         existing_images_by_digest: {}
-      when: existing_yaml_stat.stat.exists
+      # when: existing_yaml_stat.stat.exists
 
     - name: Create a lookup dictionary from existing data
       ansible.builtin.set_fact:

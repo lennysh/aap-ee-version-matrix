@@ -1,12 +1,12 @@
 ---
-# - name: Init current_data variable
-#   ansible.builtin.set_fact:
-#     current_data: {}
-
 - name: Load image data from file
   ansible.builtin.include_vars:
     file: "{{ __file.path }}"
-    name: current_data
+    name: __current_data
+
+- name: Init current_data variable
+  ansible.builtin.set_fact:
+    current_data: "{{ __current_data | default({})}}"
 
 - name: Partition images into 'to_update' and 'ok' lists
   vars:
@@ -50,16 +50,80 @@
       Image count mismatch in file {{ __file.path }}: total {{ current_data.images | length }},
       to update {{ images_to_update | length }}, ok {{ images_ok | length }}
 
+- name: Verify partitioning is mutually exclusive (no digest overlap)
+  ansible.builtin.set_fact:
+    images_ok_digests: "{{ images_ok | map(attribute='digest') | list }}"
+    images_to_update_digests: "{{ images_to_update | map(attribute='digest') | list }}"
+
+- name: Fail if any digest appears in both images_ok and images_to_update
+  ansible.builtin.assert:
+    that:
+      - (images_ok_digests | intersect(images_to_update_digests) | length) == 0
+    fail_msg: >-
+      Partitioning error in {{ __file.path }}: The following digests appear in BOTH images_ok and images_to_update:
+      {{ images_ok_digests | intersect(images_to_update_digests) | list }}
+      This should never happen - partitioning must be mutually exclusive!
+
 - name: Image Update Inspection Block
   when: images_to_update | length > 0
   block:
+    - name: Initialize processed_images list for this file
+      ansible.builtin.set_fact:
+        processed_images: []
+    
     - name: Inspect details for each image that needs an update
       ansible.builtin.include_tasks: _details_image_update.yml
       loop: "{{ images_to_update }}"
       loop_control:
         loop_var: image
         label: "{{ image.digest }}"
+    
+    - name: Verify processed_images has no duplicate digests
+      ansible.builtin.set_fact:
+        processed_digests: "{{ processed_images | default([]) | map(attribute='digest') | list }}"
+        processed_unique_digests: "{{ processed_images | default([]) | map(attribute='digest') | list | unique }}"
+    
+    - name: Fail if processed_images contains duplicate digests
+      ansible.builtin.assert:
+        that:
+          - (processed_digests | length) == (processed_unique_digests | length)
+        fail_msg: >-
+          ERROR in {{ __file.path }}: processed_images contains duplicate digests!
+          Total: {{ processed_digests | length }}, Unique: {{ processed_unique_digests | length }}
+          Duplicates: {{ processed_digests | difference(processed_unique_digests) | list }}
 
+    - name: Initialize deduplicated images dictionary
+      ansible.builtin.set_fact:
+        deduplicated_images: {}
+    
+    - name: Add images_ok to deduplicated dictionary (processed_images take precedence)
+      ansible.builtin.set_fact:
+        deduplicated_images: "{{ deduplicated_images | combine({item.digest: item}) }}"
+      loop: "{{ images_ok }}"
+      loop_control:
+        label: "{{ item.digest[-12:] }}"
+    
+    - name: Add processed_images to deduplicated dictionary (overwrites any duplicates)
+      ansible.builtin.set_fact:
+        deduplicated_images: "{{ deduplicated_images | combine({item.digest: item}) }}"
+      loop: "{{ processed_images | default([]) }}"
+      loop_control:
+        label: "{{ item.digest[-12:] }}"
+    
+    - name: Verify all original digests are preserved
+      ansible.builtin.set_fact:
+        original_digests: "{{ current_data.images | map(attribute='digest') | list }}"
+        final_digests: "{{ deduplicated_images | dict2items | map(attribute='key') | list }}"
+    
+    - name: Fail if any digest was lost
+      ansible.builtin.assert:
+        that:
+          - (original_digests | difference(final_digests) | length) == 0
+        fail_msg: >-
+          ERROR: The following digests were LOST during processing in {{ __file.path }}:
+          {{ original_digests | difference(final_digests) | list }}
+          This should never happen!
+    
     - name: Combine updated images with existing images and save to file
       ansible.builtin.copy:
         dest: "{{ __file.path }}"
@@ -68,7 +132,7 @@
           {{ (
             {
               'image_path': current_data.image_path,
-              'images': (images_ok + (processed_images | default([]))) | sort(attribute='created', reverse=True)
+              'images': deduplicated_images | dict2items | map(attribute='value') | list | sort(attribute='created', reverse=True)
             }
           ) | to_yaml }}
         mode: '0644'
