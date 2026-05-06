@@ -1,7 +1,8 @@
 ---
 image_path: registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel9
 images:
-- created: 2026-04-28 21:33:23 UTC
+- ansible_core_version: pull_failed
+  created: 2026-04-28 21:33:23 UTC
   digest: sha256:b7dc7136e9ca3159dc5653ffa389281b3a3c85cd4b9d44f06f29fcdcf0645596
   tags: ['2.20', 2.20.5, 2.20.5-1777411032]
 - ansible_core_version: pull_failed
