@@ -10,13 +10,16 @@
 
 - name: Partition images into 'to_update' and 'ok' lists
   vars:
-    # This JMESPath query identifies images that need their details to be inspected.
+    # Images to re-inspect: missing fields, pull_failed, prior-step failures (inspection_errors),
+    # or ansible_collections placeholder from a failed ansible-galaxy run (see ERROR: prefix).
     images_to_update_query: >-
       [?
         !ansible_core_version ||
         type(ansible_core_version) == 'null' ||
         ansible_core_version == '' ||
         ansible_core_version == 'pull_failed' ||
+        (type(inspection_errors) != 'null' && length(inspection_errors) > `0`) ||
+        (type(ansible_collections) == 'array' && length(ansible_collections) > `0` && contains(ansible_collections[0], 'ERROR:')) ||
         type(ansible_collections) == 'null' ||
         type(pip_packages) == 'null' ||
         type(python_version) == 'null' ||
@@ -24,7 +27,7 @@
         type(system_packages) == 'null' ||
         type(tags) == 'null'
       ]
-    # This JMESPath query identifies images that are already up-to-date.
+    # Fully successful inspection: no inspection_errors, collections not an ERROR sentinel, all fields present.
     images_ok_query: >-
       [?
         ansible_core_version &&
@@ -32,6 +35,8 @@
         ansible_core_version != '' &&
         ansible_core_version != 'pull_failed' &&
         type(ansible_collections) != 'null' &&
+        !(type(ansible_collections) == 'array' && length(ansible_collections) > `0` && contains(ansible_collections[0], 'ERROR:')) &&
+        (type(inspection_errors) == 'null' || length(inspection_errors) == `0`) &&
         type(pip_packages) != 'null' &&
         type(python_version) != 'null' &&
         type(rhel_version) != 'null' &&

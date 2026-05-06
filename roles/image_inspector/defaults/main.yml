@@ -34,3 +34,6 @@ image_inspector_output_dir: "{{ playbook_dir }}/images"
 # Controls whether to remove images from the YAML file if they are
 # no longer found in the remote registry. Set to true for 'prune' functionality.
 image_inspector_prune_images: "{{ prune_images | default(false) }}"
+
+# The default Python version to use for Ansible collections path
+image_inspector_default_python_version: "3.12"

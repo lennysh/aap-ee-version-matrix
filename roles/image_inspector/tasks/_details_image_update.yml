@@ -4,76 +4,148 @@
   vars:
     full_image_ref: "{{ current_data.image_path }}@{{ image.digest }}"
   block:
-    - name: "🔄 Pull image for inspection: {{ full_image_ref }}"
-      ansible.builtin.command: "podman pull {{ full_image_ref }}"
-      register: pull_result
-      changed_when: "'Storing signatures' in pull_result.stdout"
-
-    - name: ↳ Get Ansible and Python versions
-      ansible.builtin.command: "podman run --rm {{ full_image_ref }} ansible --version"
-      register: version_output
-      changed_when: false
-
-    - name: ↳ Get RHEL version
-      ansible.builtin.command: "podman run --rm {{ full_image_ref }} cat /etc/redhat-release"
-      register: rhel_output
-      changed_when: false
-
-    - name: ↳ Get Ansible collections
-      ansible.builtin.command: "podman run --rm {{ full_image_ref }} ansible-galaxy collection list"
-      register: collections_output
-      changed_when: false
-      failed_when: collections_output.rc != 0 and 'ERROR! - None of the provided paths were usable.' not in collections_output.stderr
-
-    - name: ↳ Get system packages (RPM)
-      ansible.builtin.command: "podman run --rm {{ full_image_ref }} rpm -qa --qf '%{NAME} %{VERSION}-%{RELEASE}\\n'"
-      register: rpm_output
-      changed_when: false
-
-    - name: ↳ Get Python packages (Pip)
-      ansible.builtin.command: "podman run --rm {{ full_image_ref }} pip3 freeze"
-      register: pip_output
-      changed_when: false
-
-    - name: ↳ Preserve original tags before processing
+    - name: Reset state for this image digest
       ansible.builtin.set_fact:
-        original_tags: "{{ image.tags | default([]) | list }}"
-    
-    - name: ↳ Assemble updated image details and set final fact
-      ansible.builtin.set_fact:
-        processed_image: "{{ image | combine({
-            'ansible_core_version': (version_output.stdout | regex_search('core (\\S+)') | default('')).split(' ') | last | replace(']', '') | default('n/a'),
-            'python_version': (version_output.stdout | regex_search('python version = (\\S+)') | default('')).split('= ') | last | default('n/a'),
-            'rhel_version': rhel_output.stdout | replace('Red Hat Enterprise Linux release ', '') | replace('Red Hat Enterprise Linux Server release ', '') | trim,
-            'ansible_collections': collections_output.stdout_lines | select('match', '^\\S+\\.\\S+') | map('split') | map('join', ' ') | list,
-            'system_packages': rpm_output.stdout_lines,
-            'pip_packages': pip_output.stdout_lines,
-            'tags': original_tags
-          }) }}"
+        pull_failed_flag: false
 
-  rescue:
-    - name: ↳ Preserve original tags on error
-      ansible.builtin.set_fact:
-        original_tags: "{{ image.tags | default([]) | list }}"
-    
-    - name: ❌ Mark image as failed on error and set final fact
-      ansible.builtin.set_fact:
-        processed_image: "{{ image | combine({
-            'ansible_core_version': 'pull_failed',
-            'tags': original_tags
-          }) }}"
+    - block:
+        - name: "🔄 Pull image for inspection: {{ full_image_ref }}"
+          ansible.builtin.command: "podman pull {{ full_image_ref }}"
+          register: pull_result
+          changed_when: "'Storing signatures' in pull_result.stdout"
+      rescue:
+        - name: ↳ Preserve original tags on pull failure
+          ansible.builtin.set_fact:
+            original_tags: "{{ image.tags | default([]) | list }}"
+            pull_failed_flag: true
+        - name: ❌ Record pull failure only (no inspection data)
+          ansible.builtin.set_fact:
+            processed_image: "{{ image | combine({
+                'ansible_core_version': 'pull_failed',
+                'inspection_errors': ['podman pull failed'],
+                'tags': original_tags
+              }) }}"
+
+    - name: Run inspection commands inside the image
+      when: not pull_failed_flag | bool
+      block:
+        - name: ↳ Get Ansible and Python versions
+          ansible.builtin.command: "podman run --rm {{ full_image_ref }} ansible --version"
+          register: version_output
+          changed_when: false
+          failed_when: false
+
+        - name: ↳ Get RHEL version
+          ansible.builtin.command: "podman run --rm {{ full_image_ref }} cat /etc/redhat-release"
+          register: rhel_output
+          changed_when: false
+          failed_when: false
+
+        - name: ↳ Get Ansible collections
+          vars:
+            __python_version: >-
+              {{
+                (
+                  (version_output.stdout | regex_search('python version = (\\S+)') | default('', true))
+                  | regex_replace('^python version = ', '')
+                ).split('.')[:2] | join('.')
+                | default(image_inspector_default_python_version, true)
+              }}
+            __ansible_collections_paths: >-
+              {{
+                '/usr/share/ansible/collections:/usr/share/ansible/ansible_collections'
+                ~ ':/usr/local/lib/python' ~ __python_version
+                ~ '/site-packages/ansible/_internal/ansible_collections'
+              }}
+          ansible.builtin.command:
+            argv:
+              - podman
+              - run
+              - --rm
+              - "{{ full_image_ref }}"
+              - ansible-galaxy
+              - collection
+              - list
+              - --collections-path={{ __ansible_collections_paths }}
+          register: collections_output
+          changed_when: false
+          failed_when: false
+
+        - name: ↳ Get system packages (RPM)
+          ansible.builtin.command: "podman run --rm {{ full_image_ref }} rpm -qa --qf '%{NAME} %{VERSION}-%{RELEASE}\\n'"
+          register: rpm_output
+          changed_when: false
+          failed_when: false
+
+        - name: ↳ Get Python packages (Pip)
+          ansible.builtin.command: "podman run --rm {{ full_image_ref }} pip3 freeze"
+          register: pip_output
+          changed_when: false
+          failed_when: false
+
+        - name: ↳ Preserve original tags before processing
+          ansible.builtin.set_fact:
+            original_tags: "{{ image.tags | default([]) | list }}"
+
+        - name: ↳ Build brief inspection error list
+          ansible.builtin.set_fact:
+            inspection_errors: >-
+              {{
+                ([] +
+                  (['ansible --version failed (rc ' ~ (version_output.rc | string) ~ ')'] if version_output.rc | default(-1) != 0 else []) +
+                  (['redhat-release failed (rc ' ~ (rhel_output.rc | string) ~ ')'] if rhel_output.rc | default(-1) != 0 else []) +
+                  (
+                    ['ansible-galaxy collection list failed (rc ' ~ (collections_output.rc | string) ~ ')']
+                    if collections_output.rc | default(-1) != 0 else []
+                  ) +
+                  (['rpm -qa failed (rc ' ~ (rpm_output.rc | string) ~ ')'] if rpm_output.rc | default(-1) != 0 else []) +
+                  (['pip3 freeze failed (rc ' ~ (pip_output.rc | string) ~ ')'] if pip_output.rc | default(-1) != 0 else [])
+                )
+              }}
+
+        - name: ↳ Assemble image details (partial data kept when some commands fail)
+          ansible.builtin.set_fact:
+            processed_image: "{{ image | combine({
+                'ansible_core_version': (
+                  (version_output.stdout | regex_search('core (\\S+)') | default('')).split(' ') | last | replace(']', '') | default('n/a')
+                  if version_output.rc | default(-1) == 0 else none
+                ),
+                'python_version': (
+                  (version_output.stdout | regex_search('python version = (\\S+)') | default('')).split('= ') | last | default('n/a')
+                  if version_output.rc | default(-1) == 0 else none
+                ),
+                'rhel_version': (
+                  (rhel_output.stdout | replace('Red Hat Enterprise Linux release ', '') | replace('Red Hat Enterprise Linux Server release ', '') | trim)
+                  if rhel_output.rc | default(-1) == 0 else none
+                ),
+                'ansible_collections': (
+                  (collections_output.stdout_lines | select('match', '^\\S+\\.\\S+') | map('split') | map('join', ' ') | list)
+                  if collections_output.rc | default(-1) == 0 else (
+                    ['ERROR: ansible-galaxy collection list failed (rc ' ~ (collections_output.rc | string) ~ ')']
+                  )
+                ),
+                'system_packages': (rpm_output.stdout_lines if rpm_output.rc | default(-1) == 0 else none),
+                'pip_packages': (pip_output.stdout_lines if pip_output.rc | default(-1) == 0 else none),
+                'inspection_errors': inspection_errors,
+                'tags': original_tags
+              }) }}"
 
   always:
+    - name: ↳ Ensure original_tags exists for assertions
+      ansible.builtin.set_fact:
+        original_tags: "{{ original_tags | default(image.tags | default([]) | list) }}"
+
     - name: ↳ Verify processed_image has correct digest and tags
       ansible.builtin.assert:
         that:
+          - processed_image is defined
           - processed_image.digest == image.digest
           - processed_image.tags | sort == original_tags | sort
         fail_msg: >-
           ERROR: processed_image tags don't match original for digest {{ image.digest }}!
           Original tags: {{ original_tags }}
           Processed tags: {{ processed_image.tags }}
-    
+
     - name: ↳ Add image to the list
       ansible.builtin.set_fact:
         processed_images: "{{ processed_images | default([]) + [processed_image] }}"
