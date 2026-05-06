@@ -1,14 +1,6 @@
 # registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel9
 
-- [Ansible Core pull_failed.*](#ansible-core-pull_failed): 2 image(s)
 - [Ansible Core 2.19.*](#ansible-core-219): 7 image(s)
-
-## Ansible Core pull_failed.*
-
-| Tags | Ansible Version | Python Version | RHEL Version | Ansible Collections | Packages | PIP Packages | Created |
-|---|---|---|---|---|---|---|---|
-| `2.20`, `2.20.4`, `2.20.4-1774443356` | pull_failed | N/A | N/A | *None* | *None* | *None* | 2026-03-25 13:11:50 UTC |
-| `2.20.2`, `2.20.2-1770624647` | pull_failed | N/A | N/A | *None* | *None* | *None* | 2026-02-09 08:26:32 UTC |
 
 ## Ansible Core 2.19.*
 
