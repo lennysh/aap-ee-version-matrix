@@ -1,6 +1,9 @@
 ---
 image_path: registry.redhat.io/ansible-automation-platform-24/ee-supported-rhel8
 images:
+- created: 2026-04-28 15:41:30 UTC
+  digest: sha256:b011c7e0b154ea897e4e511bccf4d40ed30637b845f715804a14bb8c389884df
+  tags: ['2.0', 2.0-1777390263, latest]
 - ansible_collections: [amazon.aws 6.5.4, ansible.controller 4.5.32, ansible.netcommon
       6.0.0, ansible.posix 1.5.4, ansible.scm 2.0.0, ansible.security 2.0.0, ansible.snmp
       2.0.0, ansible.utils 5.1.2, ansible.windows 3.2.0, ansible.yang 2.0.0, arista.eos
@@ -181,7 +184,7 @@ images:
     dbus-daemon 1.12.8-27.el8_10, systemd 239-82.el8_10.15, python3.12-zipp 3.19.2-2.el8ap,
     python3.12-pycares 4.4.0-3.el8ap, python3.12-oauthlib 3.2.2-2.el8ap, python3.12-distlib
       0.4.0-2.el8ap, python3.12-brotli 1.2.0-1.el8ap]
-  tags: ['2.0', 2.0-1774410048, latest]
+  tags: [2.0-1774410048]
 - ansible_collections: [amazon.aws 6.5.4, ansible.controller 4.5.31, ansible.netcommon
       6.0.0, ansible.posix 1.5.4, ansible.scm 2.0.0, ansible.security 2.0.0, ansible.snmp
       2.0.0, ansible.utils 5.1.2, ansible.windows 3.2.0, ansible.yang 2.0.0, arista.eos

@@ -1,6 +1,9 @@
 ---
 image_path: registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel9
 images:
+- created: 2026-04-28 16:29:42 UTC
+  digest: sha256:7945e923e3a8733927e4dc4333287593d6f2dd327cf831862a351824b548e175
+  tags: ['2.0', 2.0-1777391447, latest]
 - ansible_collections: [amazon.aws 9.5.1, ansible.controller 4.7.10, ansible.eda 2.11.0,
     ansible.hub 1.0.1, ansible.netcommon 8.1.0, ansible.network 5.0.0, ansible.platform
       2.6.20260306, ansible.posix 2.1.0, ansible.scm 3.0.0, ansible.security 5.0.0,
@@ -165,7 +168,7 @@ images:
     podman-remote 5.6.0-14.el9_7, automation-controller-cli 4.7.10-2.el9ap, python3.12-uamqp
       1.6.8-2.el9ap, rsync 3.2.5-3.el9, findutils 4.8.0-7.el9, file 5.39-16.el9, c-ares
       1.19.1-2.el9_4, libpq 13.23-1.el9_7, git-lfs 3.6.1-7.el9_7]
-  tags: ['2.0', 2.0-1774321273, latest]
+  tags: [2.0-1774321273]
 - ansible_collections: [amazon.aws 9.5.1, ansible.controller 4.7.9, ansible.eda 2.11.0,
     ansible.hub 1.0.1, ansible.netcommon 8.1.0, ansible.network 5.0.0, ansible.platform
       2.6.20251106, ansible.posix 2.1.0, ansible.scm 3.0.0, ansible.security 5.0.0,

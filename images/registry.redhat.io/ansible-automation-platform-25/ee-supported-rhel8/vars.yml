@@ -1,6 +1,9 @@
 ---
 image_path: registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel8
 images:
+- created: 2026-04-28 18:05:25 UTC
+  digest: sha256:f1c60a6eb65d957fb34b6d8ae561c09c36c4dcae37716707f94efab9b569dadf
+  tags: ['2.0', 2.0-1777398315, latest]
 - ansible_collections: [amazon.aws 9.2.0, ansible.controller 4.6.27, ansible.eda 2.10.0,
     ansible.hub 1.0.0, ansible.netcommon 7.1.0, ansible.network 4.0.0, ansible.platform
       2.5.20260306, ansible.posix 1.5.4, ansible.scm 3.0.0, ansible.security 3.0.0,
@@ -189,7 +192,7 @@ images:
     elfutils-default-yama-scope 0.190-2.el8, dbus-common 1.12.8-27.el8_10, systemd-pam
       239-82.el8_10.15, dbus 1.12.8-27.el8_10, python3.12-zipp 3.19.2-2.el8ap, python3.12-pycares
       4.4.0-3.el8ap, python3.12-oauthlib 3.2.2-2.el8ap, python3.12-distlib 0.4.0-2.el8ap]
-  tags: ['2.0', 2.0-1774446347, latest]
+  tags: [2.0-1774446347]
 - ansible_collections: [amazon.aws 9.2.0, ansible.controller 4.6.26, ansible.eda 2.10.0,
     ansible.hub 1.0.0, ansible.netcommon 7.1.0, ansible.network 4.0.0, ansible.platform
       2.5.20251114, ansible.posix 1.5.4, ansible.scm 3.0.0, ansible.security 3.0.0,
