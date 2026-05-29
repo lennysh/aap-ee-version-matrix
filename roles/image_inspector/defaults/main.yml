@@ -20,6 +20,10 @@ image_inspector_image_paths:
   # - "registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel10"
   - "registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel9"
   # - "registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel10"
+  - "registry.redhat.io/ansible-automation-platform-27/ee-minimal-rhel9"
+  # - "registry.redhat.io/ansible-automation-platform-27/ee-minimal-rhel10"
+  - "registry.redhat.io/ansible-automation-platform-27/ee-supported-rhel9"
+  # - "registry.redhat.io/ansible-automation-platform-27/ee-supported-rhel10"
   - "registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel8"
   - "registry.redhat.io/ansible-automation-platform-tech-preview/ee-minimal-rhel9"
 
