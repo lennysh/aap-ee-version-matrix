@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lennysh/lennysh-aap-execution-environments-version-matrix/schemas/image_digest.schema.json",
+  "title": "Image digest inspection record",
+  "description": "Per-digest vars file written by image_inspector under images/<image_path>/vars/<digest-hex>.yml",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["digest", "tags", "created"],
+  "properties": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": ["string", "number"]
+      },
+      "minItems": 1
+    },
+    "created": {
+      "type": "string"
+    },
+    "ansible_core_version": {
+      "type": ["string", "number"]
+    },
+    "python_version": {
+      "type": "string"
+    },
+    "rhel_version": {
+      "type": "string"
+    },
+    "ansible_collections": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "system_packages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pip_packages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inspection_errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
