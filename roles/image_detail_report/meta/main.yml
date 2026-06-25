@@ -3,7 +3,7 @@ galaxy_info:
   author: Lenny Shirley
   description: >-
     Generates a detailed single-image markdown inspection report from image_inspector
-    vars.yml data. Intended for local inspection; does not modify md_generator output.
+    per-digest vars data. Intended for local inspection; does not modify md_generator output.
   company: Red Hat
 
   issue_tracker_url: https://github.com/lennysh/aap-ee-version-matrix/issues

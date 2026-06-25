@@ -1,18 +1,26 @@
 ---
-- name: Load image data from file
+- name: Derive image_path from digest vars file location
+  ansible.builtin.set_fact:
+    image_path: >-
+      {{
+        __file.path
+        | regex_replace('^' ~ image_inspector_output_dir ~ '/', '')
+        | regex_replace('/' ~ image_inspector_vars_subdir ~ '/[^/]+\\.yml$', '')
+      }}
+
+- name: Load digest vars from file
   ansible.builtin.include_vars:
     file: "{{ __file.path }}"
-    name: __current_data
+    name: image
 
-- name: Init current_data variable
+- name: Set current_data for image update tasks
   ansible.builtin.set_fact:
-    current_data: "{{ __current_data | default({})}}"
+    current_data:
+      image_path: "{{ image_path }}"
 
-- name: Partition images into 'to_update' and 'ok' lists
+- name: Determine if digest needs re-inspection
   vars:
-    # Images to re-inspect: missing fields, pull_failed, prior-step failures (inspection_errors),
-    # or ansible_collections placeholder from a failed ansible-galaxy run (see ERROR: prefix).
-    images_to_update_query: >-
+    needs_update_query: >-
       [?
         !ansible_core_version ||
         type(ansible_core_version) == 'null' ||
@@ -27,117 +35,23 @@
         type(system_packages) == 'null' ||
         type(tags) == 'null'
       ]
-    # Fully successful inspection: no inspection_errors, collections not an ERROR sentinel, all fields present.
-    images_ok_query: >-
-      [?
-        ansible_core_version &&
-        type(ansible_core_version) != 'null' &&
-        ansible_core_version != '' &&
-        ansible_core_version != 'pull_failed' &&
-        type(ansible_collections) != 'null' &&
-        !(type(ansible_collections) == 'array' && length(ansible_collections) > `0` && contains(ansible_collections[0], 'ERROR:')) &&
-        (type(inspection_errors) == 'null' || length(inspection_errors) == `0`) &&
-        type(pip_packages) != 'null' &&
-        type(python_version) != 'null' &&
-        type(rhel_version) != 'null' &&
-        type(system_packages) != 'null' &&
-        type(tags) != 'null'
-      ]
   ansible.builtin.set_fact:
-    images_to_update: "{{ current_data.images | community.general.json_query(images_to_update_query) }}"
-    images_ok: "{{ current_data.images | community.general.json_query(images_ok_query) }}"
+    needs_update: "{{ [image] | community.general.json_query(needs_update_query) | length > 0 }}"
 
-- name: Fail if total image count does not match partitioned counts
-  ansible.builtin.assert:
-    that:
-      - (images_to_update | length) + (images_ok | length) == (current_data.images | length)
-    fail_msg: >-
-      Image count mismatch in file {{ __file.path }}: total {{ current_data.images | length }},
-      to update {{ images_to_update | length }}, ok {{ images_ok | length }}
-
-- name: Verify partitioning is mutually exclusive (no digest overlap)
-  ansible.builtin.set_fact:
-    images_ok_digests: "{{ images_ok | map(attribute='digest') | list }}"
-    images_to_update_digests: "{{ images_to_update | map(attribute='digest') | list }}"
-
-- name: Fail if any digest appears in both images_ok and images_to_update
-  ansible.builtin.assert:
-    that:
-      - (images_ok_digests | intersect(images_to_update_digests) | length) == 0
-    fail_msg: >-
-      Partitioning error in {{ __file.path }}: The following digests appear in BOTH images_ok and images_to_update:
-      {{ images_ok_digests | intersect(images_to_update_digests) | list }}
-      This should never happen - partitioning must be mutually exclusive!
-
-- name: Image Update Inspection Block
-  when: images_to_update | length > 0
+- name: Inspect and save updated digest vars file
+  when: needs_update | bool
   block:
-    - name: Initialize processed_images list for this file
+    - name: Initialize processed_images list for this digest
       ansible.builtin.set_fact:
         processed_images: []
-    
-    - name: Inspect details for each image that needs an update
-      ansible.builtin.include_tasks: _details_image_update.yml
-      loop: "{{ images_to_update }}"
-      loop_control:
-        loop_var: image
-        label: "{{ image.digest }}"
-    
-    - name: Verify processed_images has no duplicate digests
-      ansible.builtin.set_fact:
-        processed_digests: "{{ processed_images | default([]) | map(attribute='digest') | list }}"
-        processed_unique_digests: "{{ processed_images | default([]) | map(attribute='digest') | list | unique }}"
-    
-    - name: Fail if processed_images contains duplicate digests
-      ansible.builtin.assert:
-        that:
-          - (processed_digests | length) == (processed_unique_digests | length)
-        fail_msg: >-
-          ERROR in {{ __file.path }}: processed_images contains duplicate digests!
-          Total: {{ processed_digests | length }}, Unique: {{ processed_unique_digests | length }}
-          Duplicates: {{ processed_digests | difference(processed_unique_digests) | list }}
 
-    - name: Initialize deduplicated images dictionary
-      ansible.builtin.set_fact:
-        deduplicated_images: {}
-    
-    - name: Add images_ok to deduplicated dictionary (processed_images take precedence)
-      ansible.builtin.set_fact:
-        deduplicated_images: "{{ deduplicated_images | combine({item.digest: item}) }}"
-      loop: "{{ images_ok }}"
-      loop_control:
-        label: "{{ item.digest[-12:] }}"
-    
-    - name: Add processed_images to deduplicated dictionary (overwrites any duplicates)
-      ansible.builtin.set_fact:
-        deduplicated_images: "{{ deduplicated_images | combine({item.digest: item}) }}"
-      loop: "{{ processed_images | default([]) }}"
-      loop_control:
-        label: "{{ item.digest[-12:] }}"
-    
-    - name: Verify all original digests are preserved
-      ansible.builtin.set_fact:
-        original_digests: "{{ current_data.images | map(attribute='digest') | list }}"
-        final_digests: "{{ deduplicated_images | dict2items | map(attribute='key') | list }}"
-    
-    - name: Fail if any digest was lost
-      ansible.builtin.assert:
-        that:
-          - (original_digests | difference(final_digests) | length) == 0
-        fail_msg: >-
-          ERROR: The following digests were LOST during processing in {{ __file.path }}:
-          {{ original_digests | difference(final_digests) | list }}
-          This should never happen!
-    
-    - name: Combine updated images with existing images and save to file
+    - name: Inspect details for digest
+      ansible.builtin.include_tasks: _details_image_update.yml
+
+    - name: Save updated digest vars file
       ansible.builtin.copy:
         dest: "{{ __file.path }}"
         content: |
           ---
-          {{ (
-            {
-              'image_path': current_data.image_path,
-              'images': deduplicated_images | dict2items | map(attribute='value') | list | sort(attribute='created', reverse=True)
-            }
-          ) | to_yaml }}
+          {{ processed_images[0] | to_yaml }}
         mode: '0644'

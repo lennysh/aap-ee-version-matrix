@@ -6,16 +6,17 @@
     state: directory
     mode: '0755'
 
-- name: Find all image var files to process
+- name: Find all digest vars directories
   ansible.builtin.find:
     paths: "{{ md_generator_var_root_path }}"
-    patterns: "*.yml"
+    patterns: "vars"
+    file_type: directory
     recurse: true
-  register: yaml_files
+  register: vars_dirs
 
-- name: Process each var file found
+- name: Process each image path vars directory
   ansible.builtin.include_tasks: image_path_loop.yml
-  loop: "{{ yaml_files.files }}"
+  loop: "{{ vars_dirs.files }}"
   loop_control:
-    loop_var: __var_file
-    label: "{{ __var_file.path }}"
+    loop_var: __vars_dir
+    label: "{{ __vars_dir.path }}"

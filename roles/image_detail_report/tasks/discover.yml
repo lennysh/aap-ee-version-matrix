@@ -1,5 +1,5 @@
 ---
-# Discover remote tags and digests in memory (no vars.yml written).
+# Discover remote tags and digests in memory (no per-digest vars files written).
 
 - name: Fetch remote tags from registry
   ansible.builtin.shell:

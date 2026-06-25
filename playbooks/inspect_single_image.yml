@@ -1,6 +1,6 @@
 ---
 # Inspect one container image in memory and write a detailed local markdown report.
-# Does not read or write image_inspector vars.yml files.
+# Does not read or write image_inspector per-digest vars files.
 #
 # Usage (from repository root):
 #   ansible-playbook playbooks/inspect_single_image.yml \

@@ -35,6 +35,9 @@ image_inspector_exclude_patterns:
 # The directory where the output YAML files will be saved
 image_inspector_output_dir: "{{ playbook_dir }}/images"
 
+# Subdirectory under each image path where per-digest vars files are stored
+image_inspector_vars_subdir: vars
+
 # Controls whether to remove images from the YAML file if they are
 # no longer found in the remote registry. Set to true for 'prune' functionality.
 image_inspector_prune_images: "{{ prune_images | default(false) }}"

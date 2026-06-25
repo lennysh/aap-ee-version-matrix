@@ -3,7 +3,7 @@ Image Detail Report
 
 Discovers, inspects, and reports on container images entirely in memory. Writes
 detailed local markdown files under `output/<image_path>/<digest-hex>.md`. Does
-**not** read or write `image_inspector` `vars.yml` files and does not affect
+**not** read or write `image_inspector` per-digest vars files and does not affect
 `md_generator` output.
 
 When multiple tags share a digest, re-inspecting any of those tags updates the

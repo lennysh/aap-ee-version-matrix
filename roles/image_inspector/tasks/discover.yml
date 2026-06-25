@@ -3,13 +3,11 @@
 
 - name: "Discovering images for: {{ image_path }}"
   vars:
-    # yaml_file_name: "{{ image_path | regex_replace('/', '_') }}.yml"
-    yaml_file_name: "{{ image_path }}/vars.yml"
-    yaml_file_path: "{{ image_inspector_output_dir }}/{{ yaml_file_name }}"
+    vars_dir: "{{ image_inspector_output_dir }}/{{ image_path }}/{{ image_inspector_vars_subdir }}"
   block:
-    - name: Ensure yaml output directory exists
+    - name: Ensure vars output directory exists
       ansible.builtin.file:
-        path: "{{ yaml_file_path | dirname }}"
+        path: "{{ vars_dir }}"
         state: directory
         mode: '0755'
 
@@ -57,39 +55,67 @@
       loop_control:
         label: "{{ image_path }}@{{ item.item }}"
       when:
-        - item.rc is defined       # First, check if the rc key exists
-        - item.rc == 0             # Then, check its value
-        - item.stdout is defined   # Also good practice to check for stdout
-        - item.stdout != ""        # Ensure stdout is not empty
+        - item.rc is defined
+        - item.rc == 0
+        - item.stdout is defined
+        - item.stdout != ""
 
-    # 2. Load existing data from the local YAML file
-    - name: Check for existing inventory file
-      ansible.builtin.stat:
-        path: "{{ yaml_file_path }}"
-      register: existing_yaml_stat
-
-    - name: Load existing image data if file exists
-      ansible.builtin.include_vars:
-        file: "{{ yaml_file_path }}"
-        name: existing_data
-      when: existing_yaml_stat.stat.exists
+    # 2. Load existing per-digest vars files
+    - name: Find existing digest var files
+      ansible.builtin.find:
+        paths: "{{ vars_dir }}"
+        patterns: "*.yml"
+        file_type: file
+      register: existing_var_files
 
     - name: Initialize existing images by digest dictionary
       ansible.builtin.set_fact:
         existing_images_by_digest: {}
-      # when: existing_yaml_stat.stat.exists
 
-    - name: Create a lookup dictionary from existing data
-      ansible.builtin.set_fact:
-        existing_images_by_digest: "{{ existing_images_by_digest | default({}) | combine({item.digest: item}) }}"
-      loop: "{{ existing_data.images | default([]) }}"
+    - name: Load each existing digest vars file
+      ansible.builtin.include_tasks: _load_existing_digest.yml
+      loop: "{{ existing_var_files.files | default([]) }}"
       loop_control:
-        label: "{{ image_path }}@{{ item.digest }}"
-      when: existing_yaml_stat.stat.exists
+        loop_var: digest_var_file
+        label: "{{ digest_var_file.path | basename }}"
 
-    # 4. Generate final list and save to YAML file
-    - name: Generate final list and save to YAML file
+    # 3. Merge remote and existing data, write per-digest vars files
+    - name: Render merged image list
       ansible.builtin.template:
-        src: inventory.yml.j2
-        dest: "{{ yaml_file_path }}"
+        src: merged_images.yml.j2
+        dest: "{{ vars_dir }}/.merged_tmp.yml"
+        mode: '0600'
+
+    - name: Load merged image list
+      ansible.builtin.include_vars:
+        file: "{{ vars_dir }}/.merged_tmp.yml"
+        name: _merged_data
+
+    - name: Write per-digest vars files
+      ansible.builtin.copy:
+        dest: "{{ vars_dir }}/{{ item.digest | regex_replace('^sha256:', '') }}.yml"
+        content: |
+          ---
+          {{ item | to_yaml }}
         mode: '0644'
+      loop: "{{ _merged_data.images }}"
+      loop_control:
+        label: "{{ item.digest[-12:] }}"
+
+    - name: Remove temporary merged file
+      ansible.builtin.file:
+        path: "{{ vars_dir }}/.merged_tmp.yml"
+        state: absent
+
+    - name: Compute stale digests for pruning
+      ansible.builtin.set_fact:
+        stale_digests: "{{ existing_images_by_digest.keys() | list | difference(remote_images_by_digest.keys() | list) }}"
+
+    - name: Remove pruned digest vars files
+      ansible.builtin.file:
+        path: "{{ vars_dir }}/{{ item | regex_replace('^sha256:', '') }}.yml"
+        state: absent
+      loop: "{{ stale_digests }}"
+      loop_control:
+        label: "{{ item[-12:] }}"
+      when: image_inspector_prune_images

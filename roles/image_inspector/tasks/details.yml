@@ -1,15 +1,35 @@
 ---
 
-- name: Find all inventory YAML files to process
+- name: Find all digest vars directories
   ansible.builtin.find:
     paths: "{{ image_inspector_output_dir }}"
-    patterns: "*.yml"
+    patterns: "{{ image_inspector_vars_subdir }}"
+    file_type: directory
     recurse: true
-  register: yaml_files
+  register: vars_dirs
 
-- name: Process each inventory file found
+- name: Find digest vars files in each directory
+  ansible.builtin.find:
+    paths: "{{ item.path }}"
+    patterns: "*.yml"
+    file_type: file
+  loop: "{{ vars_dirs.files }}"
+  register: digest_var_file_lists
+
+- name: Build flat list of digest vars files
+  ansible.builtin.set_fact:
+    digest_var_files: >-
+      {{
+        digest_var_file_lists.results
+        | map(attribute='files')
+        | flatten
+        | rejectattr('path', 'search', '/\\.merged_tmp\\.yml$')
+        | list
+      }}
+
+- name: Process each digest vars file
   ansible.builtin.include_tasks: _details_file_process.yml
-  loop: "{{ yaml_files.files }}"
+  loop: "{{ digest_var_files }}"
   loop_control:
     loop_var: __file
-    label: "hidden"
+    label: "{{ __file.path | basename }}"

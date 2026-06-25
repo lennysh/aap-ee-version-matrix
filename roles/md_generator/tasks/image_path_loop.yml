@@ -1,8 +1,35 @@
-# md_generator/tasks/main.yml
+# md_generator/tasks/image_path_loop.yml
 ---
-- name: "Load image data from the found var file"
-  ansible.builtin.include_vars:
-    file: "{{ __var_file.path }}"
+- name: Derive image_path from vars directory location
+  ansible.builtin.set_fact:
+    image_path: >-
+      {{
+        __vars_dir.path
+        | regex_replace('^' ~ md_generator_var_root_path ~ '/', '')
+        | regex_replace('/vars$', '')
+      }}
+
+- name: Find digest vars files for image path
+  ansible.builtin.find:
+    paths: "{{ __vars_dir.path }}"
+    patterns: "*.yml"
+    file_type: file
+  register: digest_var_files
+
+- name: Initialize images list for template
+  ansible.builtin.set_fact:
+    images: []
+
+- name: Load all digest vars files for image path
+  ansible.builtin.include_tasks: _load_digest_var.yml
+  loop: "{{ digest_var_files.files }}"
+  loop_control:
+    loop_var: digest_var_file
+    label: "{{ digest_var_file.path | basename }}"
+
+- name: Sort images by created date descending
+  ansible.builtin.set_fact:
+    images: "{{ images | sort(attribute='created', reverse=True) }}"
 
 - name: "Ensure the output directory exists"
   ansible.builtin.file:
