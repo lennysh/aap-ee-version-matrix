@@ -39,7 +39,7 @@
   and then print the row for each image.
 -#}
 {% for image in image_list | sort(attribute='created', reverse=True) %}
-| `{{ image.tags | join('`, `') }}` | {{ image.ansible_core_version | default('N/A') }} | {{ image.python_version | default('N/A') }} | {{ image.rhel_version | default('N/A') }} | {{ render_details_list(image.ansible_collections) }} | {{ render_details_list(image.system_packages) }} | {{ render_details_list(image.pip_packages) }} | {{ image.created }} |
+| `{{ image.image_tags | join('`, `') }}` | {{ image.ansible_core_version | default('N/A') }} | {{ image.python_version | default('N/A') }} | {{ image.rhel_version | default('N/A') }} | {{ render_details_list(image.ansible_collections) }} | {{ render_details_list(image.system_packages) }} | {{ render_details_list(image.pip_packages) }} | {{ image.created }} |
 {% endfor %}
 
 {% endfor %}

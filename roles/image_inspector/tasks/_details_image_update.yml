@@ -16,14 +16,14 @@
       rescue:
         - name: ↳ Preserve original tags on pull failure
           ansible.builtin.set_fact:
-            original_tags: "{{ image.tags | default([]) | list }}"
+            original_tags: "{{ image.image_tags | default([]) | list }}"
             pull_failed_flag: true
         - name: ❌ Record pull failure only (no inspection data)
           ansible.builtin.set_fact:
             processed_image: "{{ image | combine({
                 'ansible_core_version': 'pull_failed',
                 'inspection_errors': ['podman pull failed'],
-                'tags': original_tags
+                'image_tags': original_tags
               }) }}"
 
     - name: Run inspection commands inside the image
@@ -85,7 +85,7 @@
 
         - name: ↳ Preserve original tags before processing
           ansible.builtin.set_fact:
-            original_tags: "{{ image.tags | default([]) | list }}"
+            original_tags: "{{ image.image_tags | default([]) | list }}"
 
         - name: ↳ Build brief inspection error list
           ansible.builtin.set_fact:
@@ -127,24 +127,24 @@
                 'system_packages': (rpm_output.stdout_lines if rpm_output.rc | default(-1) == 0 else none),
                 'pip_packages': (pip_output.stdout_lines if pip_output.rc | default(-1) == 0 else none),
                 'inspection_errors': inspection_errors,
-                'tags': original_tags
+                'image_tags': original_tags
               }) }}"
 
   always:
     - name: ↳ Ensure original_tags exists for assertions
       ansible.builtin.set_fact:
-        original_tags: "{{ original_tags | default(image.tags | default([]) | list) }}"
+        original_tags: "{{ original_tags | default(image.image_tags | default([]) | list) }}"
 
-    - name: ↳ Verify processed_image has correct digest and tags
+    - name: ↳ Verify processed_image has correct digest and image_tags
       ansible.builtin.assert:
         that:
           - processed_image is defined
           - processed_image.digest == image.digest
-          - processed_image.tags | sort == original_tags | sort
+          - processed_image.image_tags | sort == original_tags | sort
         fail_msg: >-
-          ERROR: processed_image tags don't match original for digest {{ image.digest }}!
-          Original tags: {{ original_tags }}
-          Processed tags: {{ processed_image.tags }}
+          ERROR: processed_image image_tags don't match original for digest {{ image.digest }}!
+          Original image_tags: {{ original_tags }}
+          Processed image_tags: {{ processed_image.image_tags }}
 
     - name: ↳ Add image to the list
       ansible.builtin.set_fact:

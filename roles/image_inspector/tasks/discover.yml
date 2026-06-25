@@ -47,7 +47,7 @@
         remote_images_by_digest: >
           {{ remote_images_by_digest | default({}) | combine({
               item.stdout.split(',')[0]: {
-                'tags': (remote_images_by_digest[item.stdout.split(',')[0]].tags | default([]) + [item.item]) | sort,
+                'image_tags': (remote_images_by_digest[item.stdout.split(',')[0]].image_tags | default([]) + [item.item]) | sort,
                 'created': item.stdout.split(',')[1]
               }
             }, recursive=true) }}
@@ -92,12 +92,12 @@
         name: _merged_data
 
     - name: Write per-digest vars files
-      ansible.builtin.copy:
+      ansible.builtin.template:
+        src: digest_var.yml.j2
         dest: "{{ vars_dir }}/{{ item.digest | regex_replace('^sha256:', '') }}.yml"
-        content: |
-          ---
-          {{ item | to_yaml }}
         mode: '0644'
+      vars:
+        digest_record: "{{ item }}"
       loop: "{{ _merged_data.images }}"
       loop_control:
         label: "{{ item.digest[-12:] }}"

@@ -25,14 +25,14 @@
       rescue:
         - name: Preserve original tags on pull failure
           ansible.builtin.set_fact:
-            image_detail_report_original_tags: "{{ image.tags | default([]) | list }}"
+            image_detail_report_original_tags: "{{ image.image_tags | default([]) | list }}"
             image_detail_report_pull_failed_flag: true
         - name: Record pull failure only (no inspection data)
           ansible.builtin.set_fact:
             image_detail_report_processed_image: "{{ image | combine({
                 'ansible_core_version': 'pull_failed',
                 'inspection_errors': ['podman pull failed'],
-                'tags': image_detail_report_original_tags
+                'image_tags': image_detail_report_original_tags
               }) }}"
 
     - name: Run inspection commands inside the image
@@ -126,7 +126,7 @@
 
         - name: Preserve original tags before processing
           ansible.builtin.set_fact:
-            image_detail_report_original_tags: "{{ image.tags | default([]) | list }}"
+            image_detail_report_original_tags: "{{ image.image_tags | default([]) | list }}"
 
         - name: Build brief inspection error list
           ansible.builtin.set_fact:
@@ -176,24 +176,24 @@
                   if image_detail_report_pip_output.rc | default(-1) == 0 else []
                 ),
                 'inspection_errors': image_detail_report_inspection_errors,
-                'tags': image_detail_report_original_tags
+                'image_tags': image_detail_report_original_tags
               }) }}"
 
   always:
     - name: Ensure original_tags exists for assertions
       ansible.builtin.set_fact:
-        image_detail_report_original_tags: "{{ image_detail_report_original_tags | default(image.tags | default([]) | list) }}"
+        image_detail_report_original_tags: "{{ image_detail_report_original_tags | default(image.image_tags | default([]) | list) }}"
 
     - name: Verify processed_image has correct digest and tags
       ansible.builtin.assert:
         that:
           - image_detail_report_processed_image is defined
           - image_detail_report_processed_image.digest == image.digest
-          - image_detail_report_processed_image.tags | sort == image_detail_report_original_tags | sort
+          - image_detail_report_processed_image.image_tags | sort == image_detail_report_original_tags | sort
         fail_msg: >-
           ERROR: processed_image tags don't match original for digest {{ image.digest }}!
           Original tags: {{ image_detail_report_original_tags }}
-          Processed tags: {{ image_detail_report_processed_image.tags }}
+          Processed tags: {{ image_detail_report_processed_image.image_tags }}
 
     - name: Add image to the in-memory list
       ansible.builtin.set_fact:

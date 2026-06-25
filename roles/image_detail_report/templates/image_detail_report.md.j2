@@ -71,7 +71,7 @@ Local detailed inspection report.
 
 | Field | Value |
 |---|---|
-| Tags | `{{ image.tags | default([], true) | join('`, `') }}` |
+| Tags | `{{ image.image_tags | default([], true) | join('`, `') }}` |
 | Digest | `{{ image.digest | default('N/A', true) }}` |
 | Ansible Core | {{ image.ansible_core_version | default('N/A', true) }} |
 | Python | {{ image.python_version | default('N/A', true) }} |
@@ -114,11 +114,11 @@ Local detailed inspection report.
 | Tags | Ansible Core | Python | RHEL | Created | Digest |
 |---|---|---|---|---|---|
 {% for image in image_list | sort(attribute='created', reverse=True) -%}
-| `{{ image.tags | default([], true) | join('`, `') }}` | {{ image.ansible_core_version | default('N/A', true) }} | {{ image.python_version | default('N/A', true) }} | {{ image.rhel_version | default('N/A', true) }} | {{ image.created | default('N/A', true) }} | `{{ image.digest | default('N/A', true) }}` |
+| `{{ image.image_tags | default([], true) | join('`, `') }}` | {{ image.ansible_core_version | default('N/A', true) }} | {{ image.python_version | default('N/A', true) }} | {{ image.rhel_version | default('N/A', true) }} | {{ image.created | default('N/A', true) }} | `{{ image.digest | default('N/A', true) }}` |
 {% endfor %}
 
 {% for image in image_list | sort(attribute='created', reverse=True) -%}
-### `{{ image.tags | default([], true) | join('`, `') }}`
+### `{{ image.image_tags | default([], true) | join('`, `') }}`
 {% if image.inspection_errors | default([], true) | length > 0 %}
 
 **Inspection errors:** {{ image.inspection_errors | default([], true) | join('; ') }}

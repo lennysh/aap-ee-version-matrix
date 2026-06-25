@@ -33,7 +33,7 @@
         type(python_version) == 'null' ||
         type(rhel_version) == 'null' ||
         type(system_packages) == 'null' ||
-        type(tags) == 'null'
+        type(image_tags) == 'null'
       ]
   ansible.builtin.set_fact:
     needs_update: "{{ [image] | community.general.json_query(needs_update_query) | length > 0 }}"
@@ -49,9 +49,9 @@
       ansible.builtin.include_tasks: _details_image_update.yml
 
     - name: Save updated digest vars file
-      ansible.builtin.copy:
+      ansible.builtin.template:
+        src: digest_var.yml.j2
         dest: "{{ __file.path }}"
-        content: |
-          ---
-          {{ processed_images[0] | to_yaml }}
         mode: '0644'
+      vars:
+        digest_record: "{{ processed_images[0] }}"

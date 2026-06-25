@@ -67,7 +67,7 @@
     image_detail_report_remote_images_by_digest: >
       {{ image_detail_report_remote_images_by_digest | default({}) | combine({
           item.stdout.split(',')[0]: {
-            'tags': (image_detail_report_remote_images_by_digest[item.stdout.split(',')[0]].tags | default([]) + [item.item]) | sort,
+            'image_tags': (image_detail_report_remote_images_by_digest[item.stdout.split(',')[0]].image_tags | default([]) + [item.item]) | sort,
             'created': item.stdout.split(',')[1]
           }
         }, recursive=true) }}
@@ -94,7 +94,7 @@
       {{
         image_detail_report_discovered_images | default([]) + [{
           'digest': item.key,
-          'tags': item.value.tags | map('string') | list,
+          'image_tags': item.value.image_tags | map('string') | list,
           'created': item.value.created
         }]
       }}

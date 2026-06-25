@@ -32,7 +32,7 @@ def check_duplicate_tags(vars_dir: Path) -> tuple[dict | None, str | None]:
             continue
 
         digest = image.get("digest", digest_file.stem)
-        for tag in image.get("tags") or []:
+        for tag in image.get("image_tags") or []:
             tag_to_digests[str(tag)].add(digest)
 
     duplicates = {
