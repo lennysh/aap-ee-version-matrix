@@ -1,6 +1,0 @@
-{
-  "ansible.python.interpreterPath": "/sbin/python3.14",
-  "yaml.schemas": {
-    "./schemas/image_digest.schema.json": "images/**/vars/*.yml"
-  }
-}

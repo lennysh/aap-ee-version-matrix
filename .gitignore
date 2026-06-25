@@ -1,5 +1,4 @@
 archive/
 .ansible/
 .vscode/*
-!.vscode/settings.json
 output/
