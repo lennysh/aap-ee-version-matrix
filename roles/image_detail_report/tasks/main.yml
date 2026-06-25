@@ -1,0 +1,60 @@
+---
+# tasks file for image_detail_report
+
+- name: Require image_path
+  ansible.builtin.assert:
+    that:
+      - image_detail_report_image_path is defined
+      - image_detail_report_image_path | length > 0
+    fail_msg: >-
+      Provide the container image repository path with
+      -e image_path=registry.example.com/namespace/image
+
+- name: Discover remote image tags and digests
+  ansible.builtin.include_tasks: discover.yml
+
+- name: Initialize in-memory inspected image list
+  ansible.builtin.set_fact:
+    image_detail_report_images: []
+
+- name: Inspect each discovered image
+  ansible.builtin.include_tasks: inspect_image.yml
+  loop: "{{ image_detail_report_discovered_images | sort(attribute='created', reverse=True) }}"
+  loop_control:
+    loop_var: image
+    label: "{{ image.digest[-12:] }}"
+
+- name: Ensure output directory exists for this image path
+  ansible.builtin.file:
+    path: "{{ image_detail_report_output_dir }}/{{ image_detail_report_image_path }}"
+    state: directory
+    mode: '0755'
+
+- name: Generate detailed markdown report per image digest
+  ansible.builtin.template:
+    src: image_detail_report.md.j2
+    dest: >-
+      {{ image_detail_report_output_dir }}/{{ image_detail_report_image_path }}/{{
+        item.digest | regex_replace('^sha256:', '')
+      }}.md
+    mode: '0644'
+  loop: "{{ image_detail_report_images | sort(attribute='created', reverse=True) }}"
+  loop_control:
+    label: "{{ item.digest[-12:] }}"
+  vars:
+    image_path: "{{ image_detail_report_image_path }}"
+    images: "{{ [item] }}"
+
+- name: Report output location
+  ansible.builtin.debug:
+    msg: >-
+      Wrote {{ image_detail_report_images | length }} report(s) under
+      {{ image_detail_report_output_dir }}/{{ image_detail_report_image_path }}/
+      ({{
+        image_detail_report_images
+        | map(attribute='digest')
+        | map('regex_replace', '^sha256:', '')
+        | map('regex_replace', '^(.*)$', '\1.md')
+        | list
+        | join(', ')
+      }})

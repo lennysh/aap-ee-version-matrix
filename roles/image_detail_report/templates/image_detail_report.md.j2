@@ -1,0 +1,131 @@
+{#-
+  Detailed single-image inspection report.
+  Packages, collections, and pip dependencies are rendered as full tables
+  (not collapsed <details> blocks like md_generator).
+  Use default(..., true) for fields that may be explicitly null after inspection.
+-#}
+{%- macro render_collections_table(items) -%}
+{%- set safe_items = items | default([], true) -%}
+{%- if safe_items | length > 0 -%}
+| Collection | Version |
+|---|---|
+{% for entry in safe_items | sort -%}
+{%- set parts = entry.split(' ', 1) -%}
+| `{{ parts[0] }}` | {{ parts[1] if parts | length > 1 else 'N/A' }} |
+{% endfor -%}
+{%- else -%}
+*None*
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro render_rpm_table(items) -%}
+{%- set safe_items = items | default([], true) -%}
+{%- if safe_items | length > 0 -%}
+| Package | Version-Release |
+|---|---|
+{% for entry in safe_items | sort -%}
+{%- set parts = entry.rsplit(' ', 1) -%}
+| `{{ parts[0] }}` | {{ parts[1] if parts | length > 1 else 'N/A' }} |
+{% endfor -%}
+{%- else -%}
+*None*
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro render_pip_table(items) -%}
+{%- set safe_items = items | default([], true) -%}
+{%- if safe_items | length > 0 -%}
+| Package | Version |
+|---|---|
+{% for entry in safe_items | sort -%}
+{%- set parts = entry.split('==', 1) -%}
+| `{{ parts[0] }}` | {{ parts[1] if parts | length > 1 else 'N/A' }} |
+{% endfor -%}
+{%- else -%}
+*None*
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro render_package_sections(image, section_prefix) -%}
+{{ section_prefix }} Ansible Collections ({{ image.ansible_collections | default([], true) | length }})
+
+{{ render_collections_table(image.ansible_collections) }}
+
+{{ section_prefix }} System Packages ({{ image.system_packages | default([], true) | length }})
+
+{{ render_rpm_table(image.system_packages) }}
+
+{{ section_prefix }} Pip Packages ({{ image.pip_packages | default([], true) | length }})
+
+{{ render_pip_table(image.pip_packages) }}
+{%- endmacro -%}
+
+# {{ image_path }}
+
+Local detailed inspection report.
+
+{% if images | length == 1 %}
+{% set image = images[0] %}
+
+## Details
+
+| Field | Value |
+|---|---|
+| Tags | `{{ image.tags | default([], true) | join('`, `') }}` |
+| Digest | `{{ image.digest | default('N/A', true) }}` |
+| Ansible Core | {{ image.ansible_core_version | default('N/A', true) }} |
+| Python | {{ image.python_version | default('N/A', true) }} |
+| RHEL | {{ image.rhel_version | default('N/A', true) }} |
+| Created | {{ image.created | default('N/A', true) }} |
+{% if image.inspection_errors | default([], true) | length > 0 %}
+| Inspection Errors | {{ image.inspection_errors | default([], true) | join('; ') }} |
+{% endif %}
+
+{{ render_package_sections(image, '##') }}
+
+{% else %}
+{# Group images by Ansible Core major.minor (same grouping as md_generator) #}
+{%- set grouped_images = {} %}
+{%- for image in images %}
+  {%- set core_version = image.ansible_core_version | default('unknown', true) | string %}
+  {%- if core_version != 'unknown' and '.' in core_version %}
+    {%- set version_group = core_version.split('.')[0:2] | join('.') %}
+  {%- else %}
+    {%- set version_group = core_version %}
+  {%- endif %}
+  {%- if version_group not in grouped_images %}
+    {%- set _ = grouped_images.update({version_group: []}) %}
+  {%- endif %}
+  {%- set _ = grouped_images[version_group].append(image) %}
+{%- endfor -%}
+
+## Contents
+
+{% for version_group, image_list in grouped_images.items() | sort(reverse=True) -%}
+- [Ansible Core {{ version_group }}](#ansible-core-{{ version_group | replace('.', '') | lower }}) ({{ image_list | length }} image{{ 's' if image_list | length != 1 else '' }})
+{% endfor %}
+
+{% for version_group, image_list in grouped_images.items() | sort(reverse=True) -%}
+
+## Ansible Core {{ version_group }}
+
+### Summary
+
+| Tags | Ansible Core | Python | RHEL | Created | Digest |
+|---|---|---|---|---|---|
+{% for image in image_list | sort(attribute='created', reverse=True) -%}
+| `{{ image.tags | default([], true) | join('`, `') }}` | {{ image.ansible_core_version | default('N/A', true) }} | {{ image.python_version | default('N/A', true) }} | {{ image.rhel_version | default('N/A', true) }} | {{ image.created | default('N/A', true) }} | `{{ image.digest | default('N/A', true) }}` |
+{% endfor %}
+
+{% for image in image_list | sort(attribute='created', reverse=True) -%}
+### `{{ image.tags | default([], true) | join('`, `') }}`
+{% if image.inspection_errors | default([], true) | length > 0 %}
+
+**Inspection errors:** {{ image.inspection_errors | default([], true) | join('; ') }}
+{% endif %}
+
+{{ render_package_sections(image, '####') }}
+
+{% endfor %}
+{% endfor %}
+{% endif %}

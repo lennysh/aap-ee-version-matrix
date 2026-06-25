@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Lenny Shirley
+  description: >-
+    Generates a detailed single-image markdown inspection report from image_inspector
+    vars.yml data. Intended for local inspection; does not modify md_generator output.
+  company: Red Hat
+
+  issue_tracker_url: https://github.com/lennysh/aap-ee-version-matrix/issues
+
+  license: MIT
+
+  min_ansible_version: !!str 2.1
+
+  galaxy_tags: []
+
+dependencies: []

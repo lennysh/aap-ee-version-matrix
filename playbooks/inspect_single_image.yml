@@ -1,0 +1,46 @@
+---
+# Inspect one container image in memory and write a detailed local markdown report.
+# Does not read or write image_inspector vars.yml files.
+#
+# Usage (from repository root):
+#   ansible-playbook playbooks/inspect_single_image.yml \
+#     -e image_path=registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8
+#
+# Limit to a single tag:
+#   ansible-playbook playbooks/inspect_single_image.yml \
+#     -e image_path=registry.redhat.io/ansible-automation-platform/ee-minimal-rhel8 \
+#     -e image_tag=2.12.10
+#
+# Reports are written to:
+#   output/<image_path>/<digest-hex>.md
+# The same digest file is updated when a different tag points at the same image.
+#
+# Optional variables:
+#   image_detail_report_output_dir — report base directory (default: <repo>/output)
+#
+- name: Inspect a single container image and generate a detailed report
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    repo_root: "{{ playbook_dir | dirname }}"
+    image_detail_report_repo_root: "{{ repo_root }}"
+
+  pre_tasks:
+    - name: Require image_path extra variable
+      ansible.builtin.assert:
+        that:
+          - image_path is defined
+          - image_path | length > 0
+        fail_msg: >-
+          Provide the container image repository path with
+          -e image_path=registry.example.com/namespace/image
+
+    - name: Apply single-tag inspection settings
+      when: image_tag is defined and image_tag | string | length > 0
+      ansible.builtin.set_fact:
+        image_detail_report_include_tags: "{{ [image_tag | string] }}"
+
+  roles:
+    - role: image_detail_report

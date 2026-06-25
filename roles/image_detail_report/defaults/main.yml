@@ -1,0 +1,22 @@
+---
+# defaults file for image_detail_report
+
+# Container image repository path (set by the playbook via -e image_path=...)
+image_detail_report_image_path: "{{ image_path }}"
+
+# Root of the repository (playbooks live in playbooks/)
+image_detail_report_repo_root: "{{ playbook_dir | dirname }}"
+
+# A list of string patterns to exclude from tag discovery results
+image_detail_report_exclude_patterns:
+  - "-source"
+  - "sha256"
+
+# When non-empty, only discover and inspect images matching these tags (exact match).
+image_detail_report_include_tags: []
+
+# The default Python version to use for Ansible collections path discovery
+image_detail_report_default_python_version: "3.12"
+
+# Base directory for generated reports (reports are written under <dir>/<image_path>/<digest>.md)
+image_detail_report_output_dir: "{{ image_detail_report_repo_root }}/output"

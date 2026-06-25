@@ -1,0 +1,103 @@
+---
+# Discover remote tags and digests in memory (no vars.yml written).
+
+- name: Fetch remote tags from registry
+  ansible.builtin.shell:
+    cmd: >
+      set -o pipefail &&
+      podman search --limit 1000 --list-tags "{{ image_detail_report_image_path }}" |
+      tail -n +2 | awk '{print $2}'
+  register: image_detail_report_remote_tags_raw
+  changed_when: false
+
+- name: Filter out excluded tags from the list
+  ansible.builtin.set_fact:
+    image_detail_report_filtered_tags: >
+      {{ image_detail_report_remote_tags_raw.stdout_lines |
+        reject('regex', '.*(' + (image_detail_report_exclude_patterns | join('|')) + ').*') |
+        list }}
+
+- name: Normalize requested tags to a list
+  ansible.builtin.set_fact:
+    image_detail_report_wanted_tags: >-
+      {{
+        [image_detail_report_include_tags | string]
+        if image_detail_report_include_tags is string
+        else image_detail_report_include_tags | map('string') | list
+      }}
+  when: image_detail_report_include_tags | default([]) | length > 0
+
+- name: Restrict discovery to requested tags
+  ansible.builtin.set_fact:
+    image_detail_report_filtered_tags: >-
+      {{
+        image_detail_report_filtered_tags
+        | intersect(image_detail_report_wanted_tags)
+        | list
+      }}
+  when: image_detail_report_include_tags | default([]) | length > 0
+
+- name: Fail when none of the requested tags were found
+  ansible.builtin.assert:
+    that:
+      - image_detail_report_filtered_tags | length > 0
+    fail_msg: >-
+      None of the requested tag(s) {{ image_detail_report_wanted_tags | join(', ') }}
+      were found for {{ image_detail_report_image_path }} after applying exclude patterns.
+  when: image_detail_report_include_tags | default([]) | length > 0
+
+- name: Inspect each tag to get its digest and creation date
+  ansible.builtin.shell:
+    cmd: >-
+      skopeo inspect --format '{{ '{{' }}.Digest{{ "}}" }},{{ '{{' }}.Created.Format "2006-01-02 15:04:05 MST"{{ "}}" }}'
+      "docker://{{ image_detail_report_image_path }}:{{ item }}"
+  register: image_detail_report_skopeo_results
+  loop: "{{ image_detail_report_filtered_tags }}"
+  loop_control:
+    label: "{{ image_detail_report_image_path }}@{{ item }}"
+  failed_when: false
+  changed_when: false
+
+- name: Initialize remote images by digest dictionary
+  ansible.builtin.set_fact:
+    image_detail_report_remote_images_by_digest: {}
+
+- name: Aggregate remote tags by digest
+  ansible.builtin.set_fact:
+    image_detail_report_remote_images_by_digest: >
+      {{ image_detail_report_remote_images_by_digest | default({}) | combine({
+          item.stdout.split(',')[0]: {
+            'tags': (image_detail_report_remote_images_by_digest[item.stdout.split(',')[0]].tags | default([]) + [item.item]) | sort,
+            'created': item.stdout.split(',')[1]
+          }
+        }, recursive=true) }}
+  loop: "{{ image_detail_report_skopeo_results.results }}"
+  loop_control:
+    label: "{{ image_detail_report_image_path }}@{{ item.item }}"
+  when:
+    - item.rc is defined
+    - item.rc == 0
+    - item.stdout is defined
+    - item.stdout != ""
+
+- name: Fail when no images were discovered
+  ansible.builtin.assert:
+    that:
+      - image_detail_report_remote_images_by_digest | length > 0
+    fail_msg: >-
+      No images discovered for {{ image_detail_report_image_path }}.
+      Check the image path and registry access.
+
+- name: Build in-memory image list for inspection
+  ansible.builtin.set_fact:
+    image_detail_report_discovered_images: >-
+      {{
+        image_detail_report_discovered_images | default([]) + [{
+          'digest': item.key,
+          'tags': item.value.tags | map('string') | list,
+          'created': item.value.created
+        }]
+      }}
+  loop: "{{ image_detail_report_remote_images_by_digest | dict2items }}"
+  loop_control:
+    label: "{{ item.key[-12:] }}"
