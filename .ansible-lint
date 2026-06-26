@@ -1,0 +1,12 @@
+---
+# Per-digest Ansible vars under images/ are validated via schemas/image_digest.schema.json
+# (and VS Code yaml.schemas). Skip ansible-lint here — package lists routinely exceed
+# yaml[line-length], and schema[vars] is covered elsewhere.
+exclude_paths:
+  - images/
+  - output/
+
+# Internal tooling roles use template-facing names (e.g. images, image_path) and
+# short-lived facts in included tasks; strict role-prefix naming adds churn without benefit.
+skip_list:
+  - var-naming[no-role-prefix]

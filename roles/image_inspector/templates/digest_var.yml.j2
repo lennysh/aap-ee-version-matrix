@@ -1,4 +1,3 @@
----
 {# Render one per-digest Ansible vars file with stable key order and YAML indentation. #}
 {%- set ansible_jinja_vars = {'trim_blocks': True, 'lstrip_blocks': True} -%}
 {%- set field_order = [
@@ -17,10 +16,14 @@
 {%- for key in field_order -%}
   {%- if digest_record[key] is defined and digest_record[key] is not none -%}
     {%- if digest_record[key] is iterable and digest_record[key] is not string -%}
-      {%- set _ = ns.lines.append(key ~ ':') -%}
-      {%- for item in digest_record[key] -%}
-        {%- set _ = ns.lines.append('  - ' ~ (item | string | to_json)) -%}
-      {%- endfor -%}
+      {%- if digest_record[key] | length == 0 -%}
+        {%- set _ = ns.lines.append(key ~ ': []') -%}
+      {%- else -%}
+        {%- set _ = ns.lines.append(key ~ ':') -%}
+        {%- for item in digest_record[key] -%}
+          {%- set _ = ns.lines.append('  - ' ~ (item | string | to_json)) -%}
+        {%- endfor -%}
+      {%- endif -%}
     {%- else -%}
       {%- set _ = ns.lines.append(key ~ ': ' ~ (digest_record[key] | to_json)) -%}
     {%- endif -%}

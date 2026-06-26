@@ -1,11 +1,11 @@
 ---
 - name: Derive image_path from digest vars file location
   ansible.builtin.set_fact:
-    image_path: >-
+    digest_image_path: >-
       {{
-        __file.path
+        (__file.path | dirname)
         | regex_replace('^' ~ image_inspector_output_dir ~ '/', '')
-        | regex_replace('/' ~ image_inspector_vars_subdir ~ '/[^/]+\\.yml$', '')
+        | regex_replace('/' ~ image_inspector_vars_subdir ~ '$', '')
       }}
 
 - name: Load digest vars from file
@@ -16,27 +16,27 @@
 - name: Set current_data for image update tasks
   ansible.builtin.set_fact:
     current_data:
-      image_path: "{{ image_path }}"
+      image_path: "{{ digest_image_path }}"
 
 - name: Determine if digest needs re-inspection
-  vars:
-    needs_update_query: >-
-      [?
-        !ansible_core_version ||
-        type(ansible_core_version) == 'null' ||
-        ansible_core_version == '' ||
-        ansible_core_version == 'pull_failed' ||
-        (type(inspection_errors) != 'null' && length(inspection_errors) > `0`) ||
-        (type(ansible_collections) == 'array' && length(ansible_collections) > `0` && contains(ansible_collections[0], 'ERROR:')) ||
-        type(ansible_collections) == 'null' ||
-        type(pip_packages) == 'null' ||
-        type(python_version) == 'null' ||
-        type(rhel_version) == 'null' ||
-        type(system_packages) == 'null' ||
-        type(image_tags) == 'null'
-      ]
   ansible.builtin.set_fact:
-    needs_update: "{{ [image] | community.general.json_query(needs_update_query) | length > 0 }}"
+    needs_update: >-
+      {{
+        image.ansible_core_version is not defined
+        or image.ansible_core_version | string in ['', 'pull_failed']
+        or image.python_version is not defined
+        or image.rhel_version is not defined
+        or image.system_packages is not defined
+        or image.pip_packages is not defined
+        or image.ansible_collections is not defined
+        or image.image_tags is not defined
+        or (image.inspection_errors | default([]) | length > 0)
+        or (
+          image.ansible_collections | default([]) | length > 0
+          and image.ansible_collections[0] is string
+          and ('ERROR:' in image.ansible_collections[0])
+        )
+      }}
 
 - name: Inspect and save updated digest vars file
   when: needs_update | bool

@@ -16,7 +16,7 @@
   loop: "{{ vars_dirs.files }}"
   register: digest_var_file_lists
 
-- name: Build flat list of digest vars files
+- name: Build flat list of digest vars files for configured image paths
   ansible.builtin.set_fact:
     digest_var_files: >-
       {{
@@ -24,6 +24,17 @@
         | map(attribute='files')
         | flatten
         | rejectattr('path', 'search', '/\\.merged_tmp\\.yml$')
+        | selectattr(
+            'path',
+            'search',
+            '^'
+            ~ (image_inspector_output_dir | regex_escape)
+            ~ '/('
+            ~ (image_inspector_image_paths | map('regex_escape') | join('|'))
+            ~ ')/'
+            ~ (image_inspector_vars_subdir | regex_escape)
+            ~ '/'
+          )
         | list
       }}
 

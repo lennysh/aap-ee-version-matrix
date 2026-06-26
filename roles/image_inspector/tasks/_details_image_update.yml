@@ -8,7 +8,8 @@
       ansible.builtin.set_fact:
         pull_failed_flag: false
 
-    - block:
+    - name: Pull image for inspection with failure handling
+      block:
         - name: "🔄 Pull image for inspection: {{ full_image_ref }}"
           ansible.builtin.command: "podman pull {{ full_image_ref }}"
           register: pull_result
@@ -19,12 +20,23 @@
             original_tags: "{{ image.image_tags | default([]) | list }}"
             pull_failed_flag: true
         - name: ❌ Record pull failure only (no inspection data)
+          vars:
+            _pull_error_detail: >-
+              {{
+                (
+                  pull_result.stderr
+                  | default(pull_result.stdout, true)
+                  | default(pull_result.msg, true)
+                  | default('unknown error', true)
+                ) | trim
+              }}
+            _pull_failure_patch:
+              ansible_core_version: pull_failed
+              inspection_errors:
+                - "podman pull failed for {{ full_image_ref }}: {{ _pull_error_detail }}"
+              image_tags: "{{ original_tags }}"
           ansible.builtin.set_fact:
-            processed_image: "{{ image | combine({
-                'ansible_core_version': 'pull_failed',
-                'inspection_errors': ['podman pull failed'],
-                'image_tags': original_tags
-              }) }}"
+            processed_image: "{{ image | combine(_pull_failure_patch) }}"
 
     - name: Run inspection commands inside the image
       when: not pull_failed_flag | bool

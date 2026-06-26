@@ -1,9 +1,9 @@
 ---
-# This file is looped over for each image_path
+# This file is looped over for each discover_image_path
 
-- name: "Discovering images for: {{ image_path }}"
+- name: "Discovering images for: {{ discover_image_path }}"
   vars:
-    vars_dir: "{{ image_inspector_output_dir }}/{{ image_path }}/{{ image_inspector_vars_subdir }}"
+    vars_dir: "{{ image_inspector_output_dir }}/{{ discover_image_path }}/{{ image_inspector_vars_subdir }}"
   block:
     - name: Ensure vars output directory exists
       ansible.builtin.file:
@@ -16,7 +16,7 @@
       ansible.builtin.shell:
         cmd: >
           set -o pipefail &&
-          podman search --limit 1000 --list-tags "{{ image_path }}" |
+          podman search --limit 1000 --list-tags "{{ discover_image_path }}" |
           tail -n +2 | awk '{print $2}'
       register: remote_tags_raw
       changed_when: false
@@ -30,11 +30,11 @@
 
     - name: Inspect each tag to get its digest and creation date
       ansible.builtin.shell:
-        cmd: "skopeo inspect --format '{{ '{{' }}.Digest{{ \"}}\" }},{{ '{{' }}.Created.Format \"2006-01-02 15:04:05 MST\"{{ \"}}\" }}' \"docker://{{ image_path }}:{{ item }}\"" # noqa: yaml[line-length]
+        cmd: "skopeo inspect --format '{{ '{{' }}.Digest{{ \"}}\" }},{{ '{{' }}.Created.Format \"2006-01-02 15:04:05 MST\"{{ \"}}\" }}' \"docker://{{ discover_image_path }}:{{ item }}\"" # noqa: yaml[line-length]
       register: inspect_results
       loop: "{{ filtered_tags }}"
       loop_control:
-        label: "{{ image_path }}@{{ item }}"
+        label: "{{ discover_image_path }}@{{ item }}"
       failed_when: false
       changed_when: false
 
@@ -53,7 +53,7 @@
             }, recursive=true) }}
       loop: "{{ inspect_results.results }}"
       loop_control:
-        label: "{{ image_path }}@{{ item.item }}"
+        label: "{{ discover_image_path }}@{{ item.item }}"
       when:
         - item.rc is defined
         - item.rc == 0

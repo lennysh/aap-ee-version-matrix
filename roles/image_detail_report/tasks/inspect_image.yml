@@ -17,7 +17,8 @@
       ansible.builtin.set_fact:
         image_detail_report_pull_failed_flag: false
 
-    - block:
+    - name: Pull image for inspection with failure handling
+      block:
         - name: "Pull image for inspection: {{ full_image_ref }}"
           ansible.builtin.command: "podman pull {{ full_image_ref }}"
           register: image_detail_report_pull_result
@@ -28,12 +29,14 @@
             image_detail_report_original_tags: "{{ image.image_tags | default([]) | list }}"
             image_detail_report_pull_failed_flag: true
         - name: Record pull failure only (no inspection data)
+          vars:
+            _pull_failure_patch:
+              ansible_core_version: pull_failed
+              inspection_errors:
+                - podman pull failed
+              image_tags: "{{ image_detail_report_original_tags }}"
           ansible.builtin.set_fact:
-            image_detail_report_processed_image: "{{ image | combine({
-                'ansible_core_version': 'pull_failed',
-                'inspection_errors': ['podman pull failed'],
-                'image_tags': image_detail_report_original_tags
-              }) }}"
+            image_detail_report_processed_image: "{{ image | combine(_pull_failure_patch) }}"
 
     - name: Run inspection commands inside the image
       when: not image_detail_report_pull_failed_flag | bool
@@ -79,20 +82,21 @@
                   ~ '/site-packages/ansible/_internal/ansible_collections'
                 )
               }}
-          ansible.builtin.shell:
-            cmd: >-
-              podman run --rm --entrypoint /bin/bash "{{ full_image_ref }}"
-              -c "ansible-galaxy collection list --collections-path={{ __ansible_collections_paths }}"
+          ansible.builtin.command:
+            argv: >-
+              {{
+                image_detail_report_podman_bash_argv + [
+                  'ansible-galaxy collection list --collections-path=' ~ __ansible_collections_paths
+                ]
+              }}
           register: image_detail_report_collections_output
           changed_when: false
           failed_when: false
 
         - name: Retry Ansible collections without explicit paths
           when: image_detail_report_collections_output.rc | default(-1) != 0
-          ansible.builtin.shell:
-            cmd: >-
-              podman run --rm --entrypoint /bin/bash "{{ full_image_ref }}"
-              -c "ansible-galaxy collection list"
+          ansible.builtin.command:
+            argv: "{{ image_detail_report_podman_bash_argv + ['ansible-galaxy collection list'] }}"
           register: image_detail_report_collections_retry
           changed_when: false
           failed_when: false
@@ -158,7 +162,12 @@
                   if image_detail_report_version_output.rc | default(-1) == 0 else none
                 ),
                 'rhel_version': (
-                  (image_detail_report_rhel_output.stdout | replace('Red Hat Enterprise Linux release ', '') | replace('Red Hat Enterprise Linux Server release ', '') | trim)
+                  (
+                    image_detail_report_rhel_output.stdout
+                    | replace('Red Hat Enterprise Linux release ', '')
+                    | replace('Red Hat Enterprise Linux Server release ', '')
+                    | trim
+                  )
                   if image_detail_report_rhel_output.rc | default(-1) == 0 else none
                 ),
                 'ansible_collections': (

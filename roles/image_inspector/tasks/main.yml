@@ -33,7 +33,7 @@
   tags: [discover]
   loop: "{{ image_inspector_image_paths }}"
   loop_control:
-    loop_var: image_path
+    loop_var: discover_image_path
 
 - name: Include image detail tasks
   ansible.builtin.include_tasks:

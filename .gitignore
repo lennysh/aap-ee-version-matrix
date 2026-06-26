@@ -2,3 +2,4 @@ archive/
 .ansible/
 .vscode/*
 output/
+**/.merged_tmp.yml
