@@ -8,6 +8,7 @@ created: "2025-07-23 21:00:59 UTC"
 ansible_core_version: "2.14.13"
 python_version: "3.9.20"
 rhel_version: "8.10 (Ootpa)"
+ansible_collections: []
 system_packages:
   - "file-libs 5.33-26.el8"
   - "crypto-policies 20230731-1.git3177e06.el8"
@@ -262,3 +263,4 @@ pip_packages:
   - "wcmatch==8.3"
   - "xmltodict==0.12.0"
   - "yamllint==1.26.3"
+inspection_errors: []

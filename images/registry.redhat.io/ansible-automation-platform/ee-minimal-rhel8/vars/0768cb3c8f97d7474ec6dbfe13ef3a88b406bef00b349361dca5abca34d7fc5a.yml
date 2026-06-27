@@ -6,6 +6,7 @@ created: "2025-05-20 15:19:28 UTC"
 ansible_core_version: "2.12.10"
 python_version: "3.8.17"
 rhel_version: "8.10 (Ootpa)"
+ansible_collections: []
 system_packages:
   - "krb5-workstation 1.18.2-31.el8_10"
   - "bzip2 1.0.6-28.el8_10"
@@ -215,3 +216,4 @@ pip_packages:
   - "toml==0.10.2"
   - "urllib3==1.25.7"
   - "xmltodict==0.12.0"
+inspection_errors: []

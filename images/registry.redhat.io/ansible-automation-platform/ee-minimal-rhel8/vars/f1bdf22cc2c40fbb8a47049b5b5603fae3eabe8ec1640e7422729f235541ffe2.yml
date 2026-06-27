@@ -6,6 +6,7 @@ created: "2024-02-14 18:35:29 UTC"
 ansible_core_version: "2.12.10"
 python_version: "3.8.17"
 rhel_version: "8.9 (Ootpa)"
+ansible_collections: []
 system_packages:
   - "filesystem 3.8-6.el8"
   - "publicsuffix-list-dafsa 20180723-1.el8"
@@ -215,3 +216,4 @@ pip_packages:
   - "toml==0.10.2"
   - "urllib3==1.25.7"
   - "xmltodict==0.12.0"
+inspection_errors: []

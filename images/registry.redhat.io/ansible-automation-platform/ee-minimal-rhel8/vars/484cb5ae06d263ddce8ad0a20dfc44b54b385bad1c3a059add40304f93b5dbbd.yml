@@ -6,6 +6,7 @@ created: "2022-10-14 16:11:45 UTC"
 ansible_core_version: "2.12.10"
 python_version: "3.8.12"
 rhel_version: "8.6 (Ootpa)"
+ansible_collections: []
 system_packages:
   - "crypto-policies 20211116-1.gitae470d6.el8"
   - "redhat-release 8.6-0.1.el8"
@@ -215,3 +216,4 @@ pip_packages:
   - "toml==0.10.2"
   - "urllib3==1.25.7"
   - "xmltodict==0.12.0"
+inspection_errors: []

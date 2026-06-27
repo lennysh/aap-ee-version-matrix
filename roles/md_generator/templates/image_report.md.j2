@@ -1,12 +1,23 @@
 {#-
   This macro takes a list of items (like packages) and renders them
   inside a collapsible HTML <details> tag for clean markdown output.
+  trim_blocks is disabled below so markdown list/heading newlines are preserved.
 -#}
+{% set ansible_jinja_vars = {'trim_blocks': False, 'lstrip_blocks': False} %}
 {%- macro render_details_list(items) -%}
 {%- if items | default([]) and items | length > 0 -%}
 <details><summary>View ({{ items | length }})</summary>{% for item in items | sort %}`{{ item }}`<br>{% endfor %}</details>
 {%- else -%}
 *None*
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro version_group_for(image) -%}
+{%- set raw_version = image['ansible_core_version'] | default('', true) -%}
+{%- if raw_version and raw_version != 'pull_failed' -%}
+{{ raw_version.split('.')[0:2] | join('.') }}
+{%- else -%}
+Pending
 {%- endif -%}
 {%- endmacro -%}
 
@@ -16,30 +27,30 @@
 {# The keys will be version groups (e.g., '2.16') and the values will be lists of image objects. #}
 {%- set grouped_images = {} %}
 {%- for image in images %}
-  {%- set version_group = image.ansible_core_version.split('.')[0:2] | join('.') %}
+  {%- set version_group = version_group_for(image) | trim %}
   {%- if version_group not in grouped_images %}
     {%- set _ = grouped_images.update({version_group: []}) %}
   {%- endif %}
   {%- set _ = grouped_images[version_group].append(image) %}
-{%- endfor -%}
+{%- endfor %}
 
-{% for version_group, image_list in grouped_images.items() | sort(reverse=True) -%}
-- [Ansible Core {{ version_group }}.*](#{{ 'ansible-core-' + version_group | replace('.', '') }}): {{ image_list | length }} image(s)
+{% for version_group, image_list in grouped_images.items() | sort(reverse=True) %}
+- {% if version_group == 'Pending' %}[Not yet inspected](#not-yet-inspected){% else %}[Ansible Core {{ version_group }}.*](#{{ 'ansible-core-' + version_group | replace('.', '') }}){% endif %}: {{ image_list | length }} image(s)
 {% endfor %}
 
 {# Step 2: Iterate over the created groups. Sort the groups by version number (descending). #}
-{% for version_group, image_list in grouped_images.items() | sort(reverse=True) -%}
+{% for version_group, image_list in grouped_images.items() | sort(reverse=True) %}
 
-## Ansible Core {{ version_group }}.*
+## {% if version_group == 'Pending' %}Not yet inspected{% else %}Ansible Core {{ version_group }}.*{% endif %}
 
 | Tags | Ansible Version | Python Version | RHEL Version | Ansible Collections | Packages | PIP Packages | Created |
 |---|---|---|---|---|---|---|---|
 {#
   Step 3: For each group, sort its list of images by the 'created' date (descending)
   and then print the row for each image.
--#}
+#}
 {% for image in image_list | sort(attribute='created', reverse=True) %}
-| `{{ image.image_tags | join('`, `') }}` | {{ image.ansible_core_version | default('N/A') }} | {{ image.python_version | default('N/A') }} | {{ image.rhel_version | default('N/A') }} | {{ render_details_list(image.ansible_collections) }} | {{ render_details_list(image.system_packages) }} | {{ render_details_list(image.pip_packages) }} | {{ image.created }} |
+| `{{ image['image_tags'] | default([]) | join('`, `') }}` | {{ image['ansible_core_version'] | default('N/A') }} | {{ image['python_version'] | default('N/A') }} | {{ image['rhel_version'] | default('N/A') }} | {{ render_details_list(image['ansible_collections']) }} | {{ render_details_list(image['system_packages']) }} | {{ render_details_list(image['pip_packages']) }} | {{ image['created'] | default('N/A') }} |
 {% endfor %}
 
 {% endfor %}
